@@ -1,0 +1,1321 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>所得税・住民税 計算アプリ｜東京都小金井市</title>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    :root {
+      --blue-50:#eff6ff;--blue-100:#dbeafe;--blue-200:#bfdbfe;--blue-500:#3b82f6;
+      --blue-600:#2563eb;--blue-700:#1d4ed8;--blue-800:#1e40af;
+      --green-50:#f0fdf4;--green-100:#dcfce7;--green-500:#22c55e;--green-600:#16a34a;
+      --amber-50:#fffbeb;--amber-100:#fef3c7;--amber-600:#d97706;
+      --purple-50:#faf5ff;--purple-100:#f3e8ff;--purple-600:#9333ea;
+      --red-50:#fef2f2;--red-100:#fee2e2;--red-600:#dc2626;
+      --gray-50:#f9fafb;--gray-100:#f3f4f6;--gray-200:#e5e7eb;--gray-300:#d1d5db;
+      --gray-400:#9ca3af;--gray-500:#6b7280;--gray-600:#4b5563;
+      --gray-700:#374151;--gray-800:#1f2937;--gray-900:#111827;
+    }
+    body { font-family:-apple-system,'Hiragino Kaku Gothic ProN','Yu Gothic','Meiryo',sans-serif;
+      background:var(--gray-50);color:var(--gray-800);font-size:14px;line-height:1.6;min-height:100vh; }
+    header { background:linear-gradient(135deg,var(--blue-800) 0%,var(--blue-600) 100%);
+      color:white;padding:14px 24px;position:sticky;top:0;z-index:100;box-shadow:0 2px 8px rgba(0,0,0,0.2); }
+    header .title-row { display:flex;align-items:center;gap:10px;flex-wrap:wrap; }
+    header h1 { font-size:17px;font-weight:700; }
+    header .badge { background:rgba(255,255,255,0.2);border:1px solid rgba(255,255,255,0.4);
+      border-radius:6px;padding:2px 10px;font-size:11px;font-weight:600; }
+    header .meta { font-size:11px;color:rgba(255,255,255,0.7);margin-top:2px; }
+    .year-selector { display:flex;align-items:center;gap:8px;margin-left:auto; }
+    .year-selector label { font-size:12px;color:rgba(255,255,255,0.8); }
+    .year-selector select { background:rgba(255,255,255,0.15);border:1px solid rgba(255,255,255,0.4);
+      color:white;border-radius:6px;padding:4px 8px;font-size:12px;cursor:pointer; }
+    .year-selector select option { background:var(--blue-800);color:white; }
+    .notice { background:var(--amber-50);border-left:4px solid var(--amber-600);
+      padding:8px 16px;font-size:12px;color:var(--gray-700);border-bottom:1px solid var(--amber-100); }
+    .main-layout { display:grid;grid-template-columns:1fr 390px;gap:0;
+      max-width:1260px;margin:0 auto;min-height:calc(100vh - 80px); }
+    .input-panel { padding:20px;border-right:1px solid var(--gray-200); }
+    .result-panel { padding:20px;background:white;position:sticky;top:52px;
+      height:calc(100vh - 52px);overflow-y:auto; }
+
+    /* Section */
+    .section { background:white;border:1px solid var(--gray-200);border-radius:10px;
+      margin-bottom:14px;overflow:hidden; }
+    .section-header { display:flex;align-items:center;gap:10px;padding:12px 16px;
+      background:var(--gray-50);border-bottom:1px solid var(--gray-200);cursor:pointer;user-select:none; }
+    .section-header:hover { background:var(--blue-50); }
+    .section-icon { width:26px;height:26px;border-radius:6px;display:flex;align-items:center;
+      justify-content:center;font-size:13px;flex-shrink:0; }
+    .section-header h2 { font-size:13px;font-weight:700;flex:1; }
+    .section-header .toggle { font-size:11px;color:var(--gray-400);transition:transform 0.2s; }
+    .section-header.open .toggle { transform:rotate(180deg); }
+    .section-body { padding:14px 16px; }
+    .section-body.hidden-body { display:none; }
+
+    /* Income type grid */
+    .income-type-grid { display:grid;grid-template-columns:repeat(4,1fr);gap:6px;margin-bottom:16px; }
+    .income-type-btn { border:1px solid var(--gray-200);border-radius:8px;padding:8px 6px;
+      background:white;cursor:pointer;text-align:center;transition:all 0.15s;font-size:11px;
+      color:var(--gray-500);line-height:1.3; }
+    .income-type-btn:hover { border-color:var(--blue-400);background:var(--blue-50); }
+    .income-type-btn.active { border-color:var(--blue-600);background:var(--blue-600);color:white;font-weight:700; }
+    .income-type-btn .btn-icon { font-size:16px;display:block;margin-bottom:2px; }
+    .income-block { border:1px solid var(--gray-200);border-radius:8px;padding:12px;margin-bottom:10px;
+      background:var(--gray-50); }
+    .income-block-title { font-size:12px;font-weight:700;color:var(--gray-600);margin-bottom:10px;
+      display:flex;align-items:center;gap:6px; }
+
+    /* Fields */
+    .field-row { display:grid;grid-template-columns:1fr auto;gap:8px;align-items:center;margin-bottom:10px; }
+    .field-row:last-child { margin-bottom:0; }
+    .field-row label { font-size:13px;color:var(--gray-700);font-weight:500; }
+    .sub-label { font-size:11px;color:var(--gray-400);font-weight:400; }
+    .input-with-unit { display:flex;align-items:center;gap:4px; }
+    .input-with-unit input,.field-row input[type="number"] {
+      width:155px;padding:6px 10px;border:1px solid var(--gray-300);border-radius:6px;
+      font-size:13px;text-align:right;transition:border-color 0.15s; }
+    .input-with-unit input:focus,.field-row input[type="number"]:focus {
+      outline:none;border-color:var(--blue-500);box-shadow:0 0 0 2px var(--blue-100); }
+    .field-row select,.input-with-unit select {
+      padding:6px 10px;border:1px solid var(--gray-300);border-radius:6px;font-size:13px;
+      background:white;cursor:pointer; }
+    .unit { font-size:12px;color:var(--gray-500);white-space:nowrap; }
+    .checkbox-row { display:flex;align-items:flex-start;gap:8px;margin-bottom:8px; }
+    .checkbox-row input[type="checkbox"] { width:15px;height:15px;margin-top:2px;cursor:pointer;flex-shrink:0; }
+    .checkbox-row label { font-size:13px;color:var(--gray-700);cursor:pointer;line-height:1.4; }
+    .indent { margin-left:22px;border-left:2px solid var(--gray-200);padding-left:12px;margin-top:4px; }
+    .hint { font-size:11px;color:var(--gray-400);margin-top:4px;line-height:1.5; }
+    .divider-label { font-size:11px;color:var(--gray-400);font-weight:700;text-transform:uppercase;
+      letter-spacing:0.05em;margin:10px 0 6px; }
+
+    /* Dep count input */
+    .dep-grid { display:grid;grid-template-columns:1fr 56px 72px;gap:6px;align-items:center;margin-bottom:7px; }
+    .dep-grid.header-row { font-size:11px;color:var(--gray-400);margin-bottom:4px; }
+    .count-input { width:56px;padding:5px 6px;border:1px solid var(--gray-300);
+      border-radius:6px;text-align:center;font-size:13px; }
+    .amount-label { text-align:right;font-size:11px;color:var(--gray-400); }
+
+    /* Insurance */
+    .ins-row { display:grid;grid-template-columns:1fr 130px;gap:8px;align-items:center;margin-bottom:7px; }
+    .ins-row label { font-size:12px;color:var(--gray-600); }
+    .ins-row input { width:130px;padding:5px 8px;border:1px solid var(--gray-300);
+      border-radius:6px;font-size:13px;text-align:right; }
+
+    /* Result panel */
+    .tab-bar { display:flex;gap:2px;margin-bottom:14px; }
+    .tab-btn { flex:1;padding:7px 4px;border:1px solid var(--gray-300);background:white;
+      border-radius:6px;font-size:12px;cursor:pointer;color:var(--gray-600);transition:all 0.15s; }
+    .tab-btn.active { background:var(--blue-600);color:white;border-color:var(--blue-600);font-weight:700; }
+    .tab-content { display:none; }
+    .tab-content.active { display:block; }
+
+    .tax-summary { background:linear-gradient(135deg,var(--blue-50),var(--blue-100));
+      border:1px solid var(--blue-200);border-radius:10px;padding:14px;margin-bottom:12px; }
+    .tax-summary .label { font-size:11px;color:var(--blue-700);font-weight:700;margin-bottom:3px; }
+    .tax-summary .amount { font-size:26px;font-weight:800;color:var(--blue-800);font-variant-numeric:tabular-nums; }
+    .tax-summary .sub { font-size:11px;color:var(--blue-600);margin-top:4px; }
+
+    .tax-grid { display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:14px; }
+    .tax-card { background:white;border:1px solid var(--gray-200);border-radius:8px;padding:10px;text-align:center; }
+    .tax-card .label { font-size:10px;color:var(--gray-500);margin-bottom:3px; }
+    .tax-card .amount { font-size:16px;font-weight:700;font-variant-numeric:tabular-nums; }
+    .tax-card.income-tax .amount { color:var(--blue-700); }
+    .tax-card.resident-tax .amount { color:var(--green-600); }
+    .tax-card.stock-tax .amount { color:var(--purple-600); }
+    .tax-card.total-tax .amount { color:var(--gray-800); }
+
+    .result-section { margin-bottom:16px; }
+    .result-section h3 { font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:0.05em;
+      color:var(--gray-500);margin-bottom:8px;padding-bottom:5px;border-bottom:1px solid var(--gray-200); }
+    .result-row { display:flex;justify-content:space-between;align-items:baseline;
+      padding:3px 0;font-size:13px; }
+    .result-row .lbl { color:var(--gray-600); }
+    .result-row .val { font-weight:600;color:var(--gray-800);font-variant-numeric:tabular-nums; }
+    .result-row.sub .lbl { font-size:11px;color:var(--gray-400);padding-left:10px; }
+    .result-row.sub .val { font-size:11px;color:var(--gray-500);font-weight:500; }
+    .result-row.total .lbl { font-weight:700;color:var(--gray-800); }
+    .result-row.total .val { font-weight:800;color:var(--blue-700);font-size:14px; }
+    .result-row.deduction .val { color:var(--green-600); }
+    .result-row.loss-row .val { color:var(--red-600); }
+    .sep { border:none;border-top:1px solid var(--gray-200);margin:10px 0; }
+    .negative { color:var(--green-600) !important; }
+    .income-breakdown { background:var(--gray-50);border:1px solid var(--gray-200);
+      border-radius:6px;padding:10px;margin-bottom:10px; }
+
+    /* Separate tax box */
+    .separate-tax-box { background:var(--purple-50);border:1px solid var(--purple-100);
+      border-radius:8px;padding:12px;margin-bottom:12px; }
+    .separate-tax-box .stb-title { font-size:11px;font-weight:700;color:var(--purple-600);margin-bottom:8px; }
+
+    .calc-btn-bar {
+      position:sticky; bottom:0; background:white; border-top:1px solid var(--gray-200);
+      padding:14px 20px; margin:0 -20px -20px; z-index:10;
+    }
+    .calc-btn {
+      width:100%; padding:14px; background:linear-gradient(135deg,var(--blue-700),var(--blue-500));
+      color:white; border:none; border-radius:10px; font-size:16px; font-weight:700;
+      cursor:pointer; letter-spacing:0.05em; transition:all 0.15s;
+      box-shadow:0 4px 12px rgba(37,99,235,0.35);
+    }
+    .calc-btn:hover { background:linear-gradient(135deg,var(--blue-800),var(--blue-600)); transform:translateY(-1px); box-shadow:0 6px 16px rgba(37,99,235,0.45); }
+    .calc-btn:active { transform:translateY(0); box-shadow:0 2px 8px rgba(37,99,235,0.3); }
+    .result-placeholder { text-align:center; padding:40px 20px; color:var(--gray-400); font-size:14px; }
+    .result-placeholder .ph-icon { font-size:40px; margin-bottom:10px; }
+    @media (max-width:800px) {
+      .main-layout { grid-template-columns:1fr; }
+      .result-panel { position:static;height:auto;border-top:2px solid var(--blue-200); }
+      .income-type-grid { grid-template-columns:repeat(2,1fr); }
+    }
+  </style>
+</head>
+<body>
+
+<header>
+  <div class="title-row">
+    <h1>所得税・住民税 計算アプリ</h1>
+    <span class="badge">令和7年分（2025年）</span>
+    <span class="badge">東京都小金井市</span>
+    <div class="year-selector">
+      <label>年度</label>
+      <select id="year-select"><option value="2025" selected>2025年（令和7年）分</option></select>
+    </div>
+  </div>
+  <div class="meta">※ 試算ツールです。確定申告の際は国税庁の公式資料をご確認ください。</div>
+</header>
+
+<div class="notice">
+  ⚠️ <strong>令和7年度税制改正（令和7〜8年分 時限措置）</strong>：
+  ①所得税の基礎控除が所得に応じて<strong>58〜95万円</strong>に拡大（合計所得655万円超は58万円）。
+  ②住民税の基礎控除は<strong>変更なし（43万円）</strong>。
+  ③給与所得控除の最低保証額が<strong>55万→65万円</strong>に引き上げ（190万円以下に適用拡大）。
+  令和9年分以降は所得税基礎控除が一律58万円に戻る予定。詳細は国税庁ウェブサイトでご確認ください。
+</div>
+
+<div class="main-layout">
+<div class="input-panel">
+
+<!-- ===== 所得の入力 ===== -->
+<div class="section">
+  <div class="section-header open" onclick="toggleSection(this)">
+    <div class="section-icon" style="background:#dbeafe">💰</div>
+    <h2>所得の入力（複数所得対応）</h2>
+    <span class="toggle">▼</span>
+  </div>
+  <div class="section-body">
+    <div style="font-size:12px;color:var(--gray-500);margin-bottom:10px">該当する所得の種類を選択してください（複数選択可）</div>
+    <div class="income-type-grid">
+      <button class="income-type-btn active" id="btn-salary" onclick="toggleIncome('salary')">
+        <span class="btn-icon">💼</span>給与・賞与
+      </button>
+      <button class="income-type-btn" id="btn-business" onclick="toggleIncome('business')">
+        <span class="btn-icon">🏪</span>事業所得
+      </button>
+      <button class="income-type-btn" id="btn-realestate" onclick="toggleIncome('realestate')">
+        <span class="btn-icon">🏠</span>不動産所得
+      </button>
+      <button class="income-type-btn" id="btn-pension" onclick="toggleIncome('pension')">
+        <span class="btn-icon">👴</span>公的年金
+      </button>
+      <button class="income-type-btn" id="btn-misc" onclick="toggleIncome('misc')">
+        <span class="btn-icon">💻</span>雑所得<br>（副業等）
+      </button>
+      <button class="income-type-btn" id="btn-dividend" onclick="toggleIncome('dividend')">
+        <span class="btn-icon">📊</span>配当所得
+      </button>
+      <button class="income-type-btn" id="btn-temporary" onclick="toggleIncome('temporary')">
+        <span class="btn-icon">🎁</span>一時所得
+      </button>
+      <button class="income-type-btn" id="btn-stock" onclick="toggleIncome('stock')">
+        <span class="btn-icon">📈</span>株式等<br>譲渡所得
+      </button>
+    </div>
+
+    <!-- 給与所得 -->
+    <div class="income-block" id="block-salary">
+      <div class="income-block-title">💼 給与・賞与所得</div>
+      <div class="field-row">
+        <div><label>給与収入（年収）</label><div class="sub-label">源泉徴収票「支払金額」欄</div></div>
+        <div class="input-with-unit"><input type="number" id="salary" value="5000000" min="0" step="10000"><span class="unit">円</span></div>
+      </div>
+      <div class="checkbox-row" style="margin-top:4px">
+        <input type="checkbox" id="has23under-emp">
+        <label for="has23under-emp">23歳未満の扶養親族あり（所得金額調整控除の対象）</label>
+      </div>
+    </div>
+
+    <!-- 事業所得 -->
+    <div class="income-block" id="block-business" style="display:none">
+      <div class="income-block-title">🏪 事業所得</div>
+      <div class="field-row">
+        <div><label>事業収入（売上等）</label></div>
+        <div class="input-with-unit"><input type="number" id="business-rev" value="0" min="0" step="10000"><span class="unit">円</span></div>
+      </div>
+      <div class="field-row">
+        <div><label>必要経費</label><div class="sub-label">仕入・外注・地代家賃・減価償却費等</div></div>
+        <div class="input-with-unit"><input type="number" id="business-exp" value="0" min="0" step="10000"><span class="unit">円</span></div>
+      </div>
+      <div class="field-row">
+        <div><label>青色申告特別控除</label></div>
+        <div class="input-with-unit">
+          <select id="business-aoiro">
+            <option value="0">なし（白色申告）</option>
+            <option value="100000">10万円（青色・簡易帳簿）</option>
+            <option value="550000">55万円（青色・正規簿記）</option>
+            <option value="650000">65万円（青色・電子申告）</option>
+          </select>
+        </div>
+      </div>
+      <div class="hint">事業所得が赤字の場合、給与所得等と損益通算します。</div>
+    </div>
+
+    <!-- 不動産所得 -->
+    <div class="income-block" id="block-realestate" style="display:none">
+      <div class="income-block-title">🏠 不動産所得</div>
+      <div class="field-row">
+        <div><label>不動産収入（家賃等）</label></div>
+        <div class="input-with-unit"><input type="number" id="re-rev" value="0" min="0" step="10000"><span class="unit">円</span></div>
+      </div>
+      <div class="field-row">
+        <div><label>必要経費</label><div class="sub-label">固定資産税・減価償却費・修繕費・借入金利子等</div></div>
+        <div class="input-with-unit"><input type="number" id="re-exp" value="0" min="0" step="10000"><span class="unit">円</span></div>
+      </div>
+      <div class="field-row">
+        <div><label>青色申告特別控除</label></div>
+        <div class="input-with-unit">
+          <select id="re-aoiro">
+            <option value="0">なし（白色申告）</option>
+            <option value="100000">10万円（青色申告）</option>
+          </select>
+        </div>
+      </div>
+      <div class="hint">赤字の場合、他の所得と損益通算します（土地取得借入金利子分は除く）。</div>
+    </div>
+
+    <!-- 公的年金 -->
+    <div class="income-block" id="block-pension" style="display:none">
+      <div class="income-block-title">👴 公的年金（雑所得）</div>
+      <div class="field-row">
+        <div><label>年金収入（年間）</label><div class="sub-label">老齢基礎年金・厚生年金・企業年金等</div></div>
+        <div class="input-with-unit"><input type="number" id="pension-rev" value="0" min="0" step="10000"><span class="unit">円</span></div>
+      </div>
+      <div class="field-row">
+        <div><label>受給者の年齢</label></div>
+        <div class="input-with-unit">
+          <select id="pension-age">
+            <option value="under65">65歳未満</option>
+            <option value="over65" selected>65歳以上</option>
+          </select>
+        </div>
+      </div>
+      <div class="hint">公的年金等控除を自動計算します。障害年金・遺族年金は非課税のため含めないでください。</div>
+    </div>
+
+    <!-- 雑所得（その他） -->
+    <div class="income-block" id="block-misc" style="display:none">
+      <div class="income-block-title">💻 雑所得（副業・原稿料・FX等）</div>
+      <div class="field-row">
+        <div><label>収入</label><div class="sub-label">副業・フリーランス・FX・仮想通貨等の収入</div></div>
+        <div class="input-with-unit"><input type="number" id="misc-rev" value="0" min="0" step="10000"><span class="unit">円</span></div>
+      </div>
+      <div class="field-row">
+        <div><label>必要経費</label></div>
+        <div class="input-with-unit"><input type="number" id="misc-exp" value="0" min="0" step="10000"><span class="unit">円</span></div>
+      </div>
+      <div class="hint">雑所得は赤字でも他の所得と損益通算できません。</div>
+    </div>
+
+    <!-- 配当所得 -->
+    <div class="income-block" id="block-dividend" style="display:none">
+      <div class="income-block-title">📊 配当所得</div>
+
+      <div class="divider-label">① 上場株式等の配当等（特定口座・一般口座）</div>
+      <div class="hint" style="margin-bottom:8px">申告分離課税を選ぶと、株式等の譲渡損失と損益通算できます。</div>
+      <div class="field-row">
+        <div><label>申告方式</label></div>
+        <div class="input-with-unit">
+          <select id="div-listed-method" onchange="updateDividendFields()">
+            <option value="none">申告しない（源泉徴収で完了）</option>
+            <option value="separate">申告分離課税（譲渡損失と損益通算可）</option>
+            <option value="comprehensive">総合課税（配当控除あり）</option>
+          </select>
+        </div>
+      </div>
+      <div id="div-listed-fields" style="display:none">
+        <div class="field-row">
+          <div><label>上場株式等の配当収入</label><div class="sub-label">上場会社・ETF・投資信託の配当・分配金</div></div>
+          <div class="input-with-unit"><input type="number" id="div-listed-rev" value="0" min="0" step="10000"><span class="unit">円</span></div>
+        </div>
+      </div>
+
+      <div class="divider-label" style="margin-top:14px">② 非上場株式等の配当等</div>
+      <div class="hint" style="margin-bottom:8px">総合課税のみ選択可。申告分離課税・損益通算は不可です。</div>
+      <div class="field-row">
+        <div><label>申告方式</label></div>
+        <div class="input-with-unit">
+          <select id="div-unlisted-method" onchange="updateDividendFields()">
+            <option value="none">申告しない（少額配当の場合）</option>
+            <option value="comprehensive">総合課税（配当控除あり）</option>
+          </select>
+        </div>
+      </div>
+      <div id="div-unlisted-fields" style="display:none">
+        <div class="field-row">
+          <div><label>非上場株式等の配当収入</label><div class="sub-label">非上場会社からの配当金</div></div>
+          <div class="input-with-unit"><input type="number" id="div-unlisted-rev" value="0" min="0" step="10000"><span class="unit">円</span></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- 一時所得 -->
+    <div class="income-block" id="block-temporary" style="display:none">
+      <div class="income-block-title">🎁 一時所得</div>
+      <div class="field-row">
+        <div><label>収入</label><div class="sub-label">生命保険の満期金・懸賞当選金・競馬の払戻金等</div></div>
+        <div class="input-with-unit"><input type="number" id="temp-rev" value="0" min="0" step="10000"><span class="unit">円</span></div>
+      </div>
+      <div class="field-row">
+        <div><label>支出（収入を得るための費用）</label></div>
+        <div class="input-with-unit"><input type="number" id="temp-exp" value="0" min="0" step="10000"><span class="unit">円</span></div>
+      </div>
+      <div class="hint">一時所得 ＝（収入 − 支出 − 特別控除50万円）× 1/2 を他の所得と合算します。</div>
+    </div>
+
+    <!-- 株式等譲渡所得（申告分離） -->
+    <div class="income-block" id="block-stock" style="display:none">
+      <div class="income-block-title">📈 株式等の譲渡所得（申告分離課税）</div>
+      <div class="field-row">
+        <div><label>譲渡収入（売却額）</label></div>
+        <div class="input-with-unit"><input type="number" id="stock-rev" value="0" min="0" step="10000"><span class="unit">円</span></div>
+      </div>
+      <div class="field-row">
+        <div><label>取得費＋譲渡費用</label><div class="sub-label">購入時の金額＋売却手数料等</div></div>
+        <div class="input-with-unit"><input type="number" id="stock-cost" value="0" min="0" step="10000"><span class="unit">円</span></div>
+      </div>
+      <div class="field-row">
+        <div><label>繰越損失</label><div class="sub-label">前年以前から繰り越した損失額</div></div>
+        <div class="input-with-unit"><input type="number" id="stock-loss" value="0" min="0" step="10000"><span class="unit">円</span></div>
+      </div>
+      <div class="hint">所得税15%＋復興税0.315%＋住民税5%＝20.315%の税率で別途計算します（総所得に含みません）。</div>
+    </div>
+  </div>
+</div>
+
+<!-- ===== 社会保険料 ===== -->
+<div class="section">
+  <div class="section-header open" onclick="toggleSection(this)">
+    <div class="section-icon" style="background:#dcfce7">🏥</div>
+    <h2>社会保険料控除</h2><span class="toggle">▼</span>
+  </div>
+  <div class="section-body">
+    <div class="checkbox-row">
+      <input type="checkbox" id="auto-shaho" onchange="toggleAutoShaho()">
+      <label for="auto-shaho">年収から概算自動計算する（協会けんぽ・東京都・厚生年金・雇用保険）</label>
+    </div>
+    <div id="shaho-manual">
+      <div class="field-row">
+        <div><label>社会保険料合計</label><div class="sub-label">源泉徴収票「社会保険料等の金額」欄</div></div>
+        <div class="input-with-unit"><input type="number" id="shaho" value="715000" min="0" step="1000"><span class="unit">円</span></div>
+      </div>
+      <div class="field-row">
+        <div><label>iDeCo（小規模企業共済等掛金）</label></div>
+        <div class="input-with-unit"><input type="number" id="ideco" value="0" min="0" step="1000"><span class="unit">円</span></div>
+      </div>
+    </div>
+    <div id="shaho-auto" style="display:none" class="hint">年収から協会けんぽ（東京都）の概算で自動計算します。</div>
+  </div>
+</div>
+
+<!-- ===== 生命保険料 ===== -->
+<div class="section">
+  <div class="section-header" onclick="toggleSection(this)">
+    <div class="section-icon" style="background:#fef3c7">🛡️</div>
+    <h2>生命保険料控除</h2><span class="toggle">▼</span>
+  </div>
+  <div class="section-body hidden-body">
+    <div class="hint" style="margin-bottom:10px">新契約（平成24年以降）の年間支払保険料を入力してください。</div>
+    <div class="divider-label">一般生命保険料（死亡保険等）</div>
+    <div class="ins-row"><label>年間支払保険料</label><input type="number" id="life-gen" value="0" min="0" step="1000"></div>
+    <div class="divider-label">介護医療保険料（医療・がん保険等）</div>
+    <div class="ins-row"><label>年間支払保険料</label><input type="number" id="life-care" value="0" min="0" step="1000"></div>
+    <div class="divider-label">個人年金保険料</div>
+    <div class="ins-row"><label>年間支払保険料</label><input type="number" id="life-pension" value="0" min="0" step="1000"></div>
+    <div class="hint">各区分の上限：所得税4万円（合計12万円）、住民税2.8万円（合計7万円）</div>
+  </div>
+</div>
+
+<!-- ===== 地震保険料 ===== -->
+<div class="section">
+  <div class="section-header" onclick="toggleSection(this)">
+    <div class="section-icon" style="background:#fef3c7">🏡</div>
+    <h2>地震保険料控除</h2><span class="toggle">▼</span>
+  </div>
+  <div class="section-body hidden-body">
+    <div class="field-row">
+      <div><label>年間支払地震保険料</label></div>
+      <div class="input-with-unit"><input type="number" id="earthquake-ins" value="0" min="0" step="1000"><span class="unit">円</span></div>
+    </div>
+    <div class="hint">所得税：全額控除（上限5万円）、住民税：全額控除（上限2.5万円）</div>
+  </div>
+</div>
+
+<!-- ===== 配偶者 ===== -->
+<div class="section">
+  <div class="section-header" onclick="toggleSection(this)">
+    <div class="section-icon" style="background:#f3e8ff">👫</div>
+    <h2>配偶者控除・配偶者特別控除</h2><span class="toggle">▼</span>
+  </div>
+  <div class="section-body hidden-body">
+    <div class="checkbox-row">
+      <input type="checkbox" id="has-spouse" onchange="toggleSpouseFields()">
+      <label for="has-spouse">配偶者がいる</label>
+    </div>
+    <div id="spouse-fields" style="display:none" class="indent">
+      <div class="field-row">
+        <div><label>配偶者の給与収入</label><div class="sub-label">専業主婦(夫)の場合は 0</div></div>
+        <div class="input-with-unit"><input type="number" id="spouse-salary" value="0" min="0" step="10000"><span class="unit">円</span></div>
+      </div>
+      <div class="field-row">
+        <div><label>配偶者の社会保険料</label></div>
+        <div class="input-with-unit"><input type="number" id="spouse-shaho" value="0" min="0" step="1000"><span class="unit">円</span></div>
+      </div>
+      <div class="field-row">
+        <div><label>配偶者のその他所得（給与以外）</label></div>
+        <div class="input-with-unit"><input type="number" id="spouse-other" value="0" min="0" step="10000"><span class="unit">円</span></div>
+      </div>
+      <div class="checkbox-row" style="margin-top:4px">
+        <input type="checkbox" id="spouse-elderly">
+        <label for="spouse-elderly">老人控除対象配偶者（70歳以上）</label>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ===== 扶養 ===== -->
+<div class="section">
+  <div class="section-header" onclick="toggleSection(this)">
+    <div class="section-icon" style="background:#f3e8ff">👨‍👩‍👧‍👦</div>
+    <h2>扶養控除</h2><span class="toggle">▼</span>
+  </div>
+  <div class="section-body hidden-body">
+    <div class="dep-grid header-row">
+      <div>種別</div><div style="text-align:center">人数</div><div class="amount-label">所得税控除</div>
+    </div>
+    <div class="dep-grid"><div>一般扶養<span style="font-size:11px;color:var(--gray-400)">（16〜18歳、23〜69歳）</span></div><input type="number" class="count-input" id="dep-general" value="0" min="0" max="10"><div class="amount-label">38万円</div></div>
+    <div class="dep-grid"><div>特定扶養<span style="font-size:11px;color:var(--gray-400)">（19〜22歳）</span></div><input type="number" class="count-input" id="dep-specific" value="0" min="0" max="10"><div class="amount-label">63万円</div></div>
+    <div class="dep-grid"><div>年少扶養<span style="font-size:11px;color:var(--gray-400)">（15歳以下）</span></div><input type="number" class="count-input" id="dep-minor" value="0" min="0" max="10"><div class="amount-label">控除なし</div></div>
+    <div class="dep-grid"><div>老人扶養（同居）<span style="font-size:11px;color:var(--gray-400)">（70歳以上）</span></div><input type="number" class="count-input" id="dep-eld-co" value="0" min="0" max="10"><div class="amount-label">58万円</div></div>
+    <div class="dep-grid"><div>老人扶養（別居）<span style="font-size:11px;color:var(--gray-400)">（70歳以上）</span></div><input type="number" class="count-input" id="dep-eld-ot" value="0" min="0" max="10"><div class="amount-label">48万円</div></div>
+  </div>
+</div>
+
+<!-- ===== 障害者・ひとり親等 ===== -->
+<div class="section">
+  <div class="section-header" onclick="toggleSection(this)">
+    <div class="section-icon" style="background:#fce7f3">🦽</div>
+    <h2>障害者・ひとり親・寡婦・勤労学生控除</h2><span class="toggle">▼</span>
+  </div>
+  <div class="section-body hidden-body">
+    <div class="divider-label">障害者控除</div>
+    <div class="checkbox-row"><input type="checkbox" id="dis-gen" onchange="showCount('dis-gen')"><label for="dis-gen">一般障害者</label></div>
+    <div class="indent" id="cnt-dis-gen" style="display:none"><div class="ins-row"><label>人数</label><input type="number" class="count-input" id="dis-gen-n" value="1" min="1" max="10"></div></div>
+    <div class="checkbox-row"><input type="checkbox" id="dis-sp" onchange="showCount('dis-sp')"><label for="dis-sp">特別障害者</label></div>
+    <div class="indent" id="cnt-dis-sp" style="display:none"><div class="ins-row"><label>人数</label><input type="number" class="count-input" id="dis-sp-n" value="1" min="1" max="10"></div></div>
+    <div class="checkbox-row"><input type="checkbox" id="dis-co" onchange="showCount('dis-co')"><label for="dis-co">同居特別障害者（配偶者・扶養親族）</label></div>
+    <div class="indent" id="cnt-dis-co" style="display:none"><div class="ins-row"><label>人数</label><input type="number" class="count-input" id="dis-co-n" value="1" min="1" max="10"></div></div>
+    <div class="divider-label" style="margin-top:10px">ひとり親・寡婦控除</div>
+    <div class="checkbox-row"><input type="checkbox" id="single-parent"><label for="single-parent">ひとり親控除（合計所得500万円以下）</label></div>
+    <div class="checkbox-row"><input type="checkbox" id="widow"><label for="widow">寡婦控除（ひとり親に該当しない寡婦）</label></div>
+    <div class="divider-label" style="margin-top:10px">勤労学生控除</div>
+    <div class="checkbox-row"><input type="checkbox" id="student-worker"><label for="student-worker">勤労学生（合計所得75万円以下）</label></div>
+  </div>
+</div>
+
+<!-- ===== 医療費控除 ===== -->
+<div class="section">
+  <div class="section-header" onclick="toggleSection(this)">
+    <div class="section-icon" style="background:#fee2e2">🏨</div>
+    <h2>医療費控除</h2><span class="toggle">▼</span>
+  </div>
+  <div class="section-body hidden-body">
+    <div class="hint" style="margin-bottom:10px">控除額 ＝ 実支払額 − 補填額 − min(総所得×5%, 10万円)</div>
+    <div class="field-row">
+      <div><label>実際に支払った医療費</label></div>
+      <div class="input-with-unit"><input type="number" id="medical-paid" value="0" min="0" step="1000"><span class="unit">円</span></div>
+    </div>
+    <div class="field-row">
+      <div><label>保険等で補填された金額</label></div>
+      <div class="input-with-unit"><input type="number" id="medical-covered" value="0" min="0" step="1000"><span class="unit">円</span></div>
+    </div>
+  </div>
+</div>
+
+<!-- ===== 寄附金 ===== -->
+<div class="section">
+  <div class="section-header" onclick="toggleSection(this)">
+    <div class="section-icon" style="background:#d1fae5">🎗️</div>
+    <h2>寄附金控除（ふるさと納税等）</h2><span class="toggle">▼</span>
+  </div>
+  <div class="section-body hidden-body">
+    <div class="field-row">
+      <div><label>寄附金合計額</label></div>
+      <div class="input-with-unit"><input type="number" id="donation" value="0" min="0" step="1000"><span class="unit">円</span></div>
+    </div>
+    <div class="hint">控除額 ＝ 寄附金額 − 2,000円（上限：総所得×40%）</div>
+  </div>
+</div>
+
+<!-- ===== 住宅ローン控除 ===== -->
+<div class="section">
+  <div class="section-header" onclick="toggleSection(this)">
+    <div class="section-icon" style="background:#dbeafe">🏠</div>
+    <h2>住宅借入金等特別控除（税額控除）</h2><span class="toggle">▼</span>
+  </div>
+  <div class="section-body hidden-body">
+    <div class="field-row">
+      <div><label>住宅ローン控除額</label><div class="sub-label">源泉徴収票の「住宅借入金等特別控除の額」</div></div>
+      <div class="input-with-unit"><input type="number" id="housing-loan" value="0" min="0" step="1000"><span class="unit">円</span></div>
+    </div>
+    <div class="hint">所得税から優先的に差し引き、引ききれない分は住民税から控除します（上限あり）。</div>
+  </div>
+</div>
+
+  <!-- 計算ボタン -->
+  <div class="calc-btn-bar">
+    <button class="calc-btn" onclick="runCalc()">計算する</button>
+  </div>
+
+</div><!-- /input-panel -->
+
+<!-- ===== 結果パネル ===== -->
+<div class="result-panel">
+  <!-- 初期プレースホルダー -->
+  <div id="result-placeholder" class="result-placeholder">
+    <div class="ph-icon">🧮</div>
+    <div style="font-weight:700;color:var(--gray-600);margin-bottom:6px">入力完了後、「計算する」を押してください</div>
+    <div style="font-size:12px">所得・控除の各項目を入力し、<br>左下のボタンで計算を実行します。</div>
+  </div>
+
+  <!-- 計算結果（初期は非表示） -->
+  <div id="result-body" style="display:none">
+  <div class="tab-bar">
+    <button class="tab-btn active" onclick="switchTab('summary')">まとめ</button>
+    <button class="tab-btn" onclick="switchTab('income')">所得税</button>
+    <button class="tab-btn" onclick="switchTab('resident')">住民税</button>
+    <button class="tab-btn" onclick="switchTab('separate')">分離課税</button>
+  </div>
+
+  <!-- まとめ -->
+  <div id="tab-summary" class="tab-content active">
+    <div class="tax-summary">
+      <div class="label">年間税負担合計（概算）</div>
+      <div class="amount" id="total-tax-display">―</div>
+      <div class="sub" id="total-tax-sub">入力値を確認中...</div>
+    </div>
+    <div class="tax-grid">
+      <div class="tax-card income-tax"><div class="label">所得税（復興税込）</div><div class="amount" id="s-it">―</div></div>
+      <div class="tax-card resident-tax"><div class="label">住民税（令和8年度）</div><div class="amount" id="s-rt">―</div></div>
+      <div class="tax-card stock-tax"><div class="label">株式等譲渡税</div><div class="amount" id="s-st">―</div></div>
+      <div class="tax-card total-tax"><div class="label">合計（全税種）</div><div class="amount" id="s-total">―</div></div>
+    </div>
+    <div class="result-section">
+      <h3>所得の内訳</h3>
+      <div id="income-breakdown-rows"></div>
+      <div class="result-row" id="dual-adj-row" style="display:none">
+        <span class="lbl">所得金額調整控除（給与＋年金）</span><span class="val" id="s-dual-adj"></span>
+      </div>
+      <div class="result-row total"><span class="lbl">総所得金額</span><span class="val" id="s-total-income">―</span></div>
+    </div>
+    <div class="result-section">
+      <h3>課税所得と実効税率</h3>
+      <div class="result-row"><span class="lbl">課税所得（所得税）</span><span class="val" id="s-taxable-it">―</span></div>
+      <div class="result-row"><span class="lbl">課税所得（住民税）</span><span class="val" id="s-taxable-rt">―</span></div>
+      <hr class="sep">
+      <div class="result-row"><span class="lbl">所得税実効税率</span><span class="val" id="s-eff-it">―</span></div>
+      <div class="result-row"><span class="lbl">住民税実効税率</span><span class="val" id="s-eff-rt">―</span></div>
+      <div class="result-row"><span class="lbl">合計実効税率（対年収）</span><span class="val" id="s-eff-total">―</span></div>
+    </div>
+  </div>
+
+  <!-- 所得税 -->
+  <div id="tab-income" class="tab-content">
+    <div class="result-section">
+      <h3>所得の計算</h3>
+      <div id="it-income-rows"></div>
+      <div class="result-row" id="it-dual-adj-row" style="display:none">
+        <span class="lbl">所得金額調整控除（給与＋年金）</span><span class="val deduction" id="it-dual-adj"></span>
+      </div>
+      <div class="result-row total"><span class="lbl">総所得金額</span><span class="val" id="it-total-income">―</span></div>
+    </div>
+    <hr class="sep">
+    <div class="result-section">
+      <h3>所得控除の計算</h3>
+      <div class="result-row sub"><span class="lbl">社会保険料控除</span><span class="val negative" id="it-shaho">―</span></div>
+      <div class="result-row sub"><span class="lbl">iDeCo等掛金控除</span><span class="val negative" id="it-ideco">―</span></div>
+      <div class="result-row sub"><span class="lbl">生命保険料控除</span><span class="val negative" id="it-life">―</span></div>
+      <div class="result-row sub"><span class="lbl">地震保険料控除</span><span class="val negative" id="it-eq">―</span></div>
+      <div class="result-row sub"><span class="lbl">配偶者控除・配偶者特別控除</span><span class="val negative" id="it-spouse">―</span></div>
+      <div class="result-row sub"><span class="lbl">扶養控除</span><span class="val negative" id="it-dep">―</span></div>
+      <div class="result-row sub"><span class="lbl">障害者控除</span><span class="val negative" id="it-dis">―</span></div>
+      <div class="result-row sub"><span class="lbl">ひとり親・寡婦控除</span><span class="val negative" id="it-sp">―</span></div>
+      <div class="result-row sub"><span class="lbl">勤労学生控除</span><span class="val negative" id="it-sw">―</span></div>
+      <div class="result-row sub"><span class="lbl">医療費控除</span><span class="val negative" id="it-med">―</span></div>
+      <div class="result-row sub"><span class="lbl">寄附金控除</span><span class="val negative" id="it-don">―</span></div>
+      <div class="result-row sub"><span class="lbl">基礎控除（58万円）</span><span class="val negative" id="it-basic">―</span></div>
+      <div class="result-row total"><span class="lbl">所得控除合計</span><span class="val" id="it-ded-total">―</span></div>
+    </div>
+    <hr class="sep">
+    <div class="result-section">
+      <h3>所得税額の計算</h3>
+      <div class="result-row"><span class="lbl">課税所得（1,000円未満切捨）</span><span class="val" id="it-taxable">―</span></div>
+      <div class="result-row sub"><span class="lbl">適用税率</span><span class="val" id="it-rate">―</span></div>
+      <div class="result-row sub"><span class="lbl">所得税額（基本）</span><span class="val" id="it-base">―</span></div>
+      <div class="result-row sub"><span class="lbl">配当控除</span><span class="val negative" id="it-div-ded">―</span></div>
+      <div class="result-row sub"><span class="lbl">住宅ローン控除</span><span class="val negative" id="it-housing">―</span></div>
+      <div class="result-row"><span class="lbl">所得税額</span><span class="val" id="it-tax">―</span></div>
+      <div class="result-row sub"><span class="lbl">復興特別所得税（×2.1%）</span><span class="val" id="it-rec">―</span></div>
+      <div class="result-row total"><span class="lbl">所得税合計（復興税込）</span><span class="val" id="it-total">―</span></div>
+    </div>
+  </div>
+
+  <!-- 住民税 -->
+  <div id="tab-resident" class="tab-content">
+    <div class="hint" style="margin-bottom:10px;padding:8px;background:var(--blue-50);border-radius:6px;font-size:11px">
+      令和7年分の所得をもとに、令和8年度（2026年6月〜）に徴収される住民税を計算します。
+    </div>
+    <div class="result-section">
+      <h3>所得・控除の計算</h3>
+      <div class="result-row"><span class="lbl">総所得金額</span><span class="val" id="rt-total-income">―</span></div>
+      <div class="result-row sub"><span class="lbl">社会保険料控除</span><span class="val negative" id="rt-shaho">―</span></div>
+      <div class="result-row sub"><span class="lbl">iDeCo等掛金控除</span><span class="val negative" id="rt-ideco">―</span></div>
+      <div class="result-row sub"><span class="lbl">生命保険料控除（上限7万円）</span><span class="val negative" id="rt-life">―</span></div>
+      <div class="result-row sub"><span class="lbl">地震保険料控除（上限2.5万円）</span><span class="val negative" id="rt-eq">―</span></div>
+      <div class="result-row sub"><span class="lbl">配偶者控除・配偶者特別控除</span><span class="val negative" id="rt-spouse">―</span></div>
+      <div class="result-row sub"><span class="lbl">扶養控除</span><span class="val negative" id="rt-dep">―</span></div>
+      <div class="result-row sub"><span class="lbl">障害者控除</span><span class="val negative" id="rt-dis">―</span></div>
+      <div class="result-row sub"><span class="lbl">ひとり親・寡婦控除</span><span class="val negative" id="rt-sp">―</span></div>
+      <div class="result-row sub"><span class="lbl">勤労学生控除</span><span class="val negative" id="rt-sw">―</span></div>
+      <div class="result-row sub"><span class="lbl">医療費控除</span><span class="val negative" id="rt-med">―</span></div>
+      <div class="result-row sub"><span class="lbl">寄附金控除</span><span class="val negative" id="rt-don">―</span></div>
+      <div class="result-row sub"><span class="lbl">基礎控除（53万円）</span><span class="val negative" id="rt-basic">―</span></div>
+      <div class="result-row total"><span class="lbl">所得控除合計</span><span class="val" id="rt-ded-total">―</span></div>
+    </div>
+    <hr class="sep">
+    <div class="result-section">
+      <h3>住民税額の計算</h3>
+      <div class="result-row"><span class="lbl">課税所得（1,000円未満切捨）</span><span class="val" id="rt-taxable">―</span></div>
+      <div class="result-row sub"><span class="lbl">市民税所得割（×6%）</span><span class="val" id="rt-mun">―</span></div>
+      <div class="result-row sub"><span class="lbl">都民税所得割（×4%）</span><span class="val" id="rt-pref">―</span></div>
+      <div class="result-row sub"><span class="lbl">配当控除</span><span class="val negative" id="rt-div-ded">―</span></div>
+      <div class="result-row sub"><span class="lbl">住宅ローン控除</span><span class="val negative" id="rt-housing">―</span></div>
+      <div class="result-row"><span class="lbl">所得割合計</span><span class="val" id="rt-income-tax">―</span></div>
+      <div class="result-row sub"><span class="lbl">均等割（市民税3,000＋都民税1,000）</span><span class="val" id="rt-flat">―</span></div>
+      <div class="result-row sub"><span class="lbl">森林環境税（国税）</span><span class="val" id="rt-forest">―</span></div>
+      <div class="result-row total"><span class="lbl">住民税合計（令和8年度）</span><span class="val" id="rt-total">―</span></div>
+    </div>
+  </div>
+
+  <!-- 分離課税 -->
+  <div id="tab-separate" class="tab-content">
+    <div id="no-separate-msg" style="padding:20px;text-align:center;color:var(--gray-400);font-size:13px">
+      株式等の譲渡所得または申告分離課税の配当所得を入力すると、ここに表示されます。
+    </div>
+    <div id="stock-result" style="display:none">
+      <div class="separate-tax-box">
+        <div class="stb-title">📈 株式等の譲渡所得（申告分離課税）</div>
+        <div class="result-row"><span class="lbl">譲渡収入</span><span class="val" id="st-rev">―</span></div>
+        <div class="result-row sub"><span class="lbl">取得費・譲渡費用</span><span class="val" id="st-cost">―</span></div>
+        <div class="result-row sub"><span class="lbl">繰越損失</span><span class="val" id="st-loss">―</span></div>
+        <div class="result-row total"><span class="lbl">課税譲渡所得</span><span class="val" id="st-taxable">―</span></div>
+        <hr class="sep">
+        <div class="result-row sub"><span class="lbl">所得税（15%）</span><span class="val" id="st-it">―</span></div>
+        <div class="result-row sub"><span class="lbl">復興特別所得税（0.315%）</span><span class="val" id="st-rec">―</span></div>
+        <div class="result-row sub"><span class="lbl">住民税（5%）</span><span class="val" id="st-rt">―</span></div>
+        <div class="result-row total"><span class="lbl">株式等譲渡税合計（20.315%）</span><span class="val" id="st-total">―</span></div>
+      </div>
+    </div>
+    <div id="dividend-separate-result" style="display:none">
+      <div class="separate-tax-box">
+        <div class="stb-title">📊 上場株式等の配当等（申告分離課税）＋ 株式等譲渡所得の損益通算</div>
+        <div class="result-row sub"><span class="lbl">株式等の譲渡所得</span><span class="val" id="div-sep-stock-gain">―</span></div>
+        <div class="result-row sub"><span class="lbl">上場株式等の配当等</span><span class="val" id="div-sep-rev">―</span></div>
+        <div class="result-row total"><span class="lbl">損益通算後 課税金額</span><span class="val" id="div-sep-taxable">―</span></div>
+        <hr class="sep">
+        <div class="result-row sub"><span class="lbl">所得税（15%）</span><span class="val" id="div-sep-it">―</span></div>
+        <div class="result-row sub"><span class="lbl">復興特別所得税（0.315%）</span><span class="val" id="div-sep-rec">―</span></div>
+        <div class="result-row sub"><span class="lbl">住民税（5%）</span><span class="val" id="div-sep-rt">―</span></div>
+        <div class="result-row total"><span class="lbl">合計税額（20.315%）</span><span class="val" id="div-sep-total">―</span></div>
+        <div class="hint" style="margin-top:4px">※ 源泉徴収済みの税額と比較し、有利な方を選択してください。</div>
+      </div>
+    </div>
+  </div>
+
+  </div><!-- /result-body -->
+</div><!-- /result-panel -->
+</div><!-- /main-layout -->
+
+<script>
+// ===================================================================
+// 税制設定
+// ===================================================================
+const RULES = {
+  2025: {
+    // 給与所得控除（令和7年改正：最低保証55万→65万、162.5万以下→190万以下に拡大）
+    empDed: (y) => {
+      if (y <= 1900000) return 650000;
+      if (y <= 3600000) return Math.floor(y * 0.3) + 80000;
+      if (y <= 6600000) return Math.floor(y * 0.2) + 440000;
+      if (y <= 8500000) return Math.floor(y * 0.1) + 1100000;
+      return 1950000;
+    },
+    // 所得税 基礎控除（令和7〜8年分 時限措置：所得に応じて段階的、令和9年以降は一律58万円）
+    basicIT: (income) => {
+      if (income <= 25000000) {
+        // 高所得フェーズアウト（2,350万超）
+        if (income > 24500000) return 160000;
+        if (income > 24000000) return 320000;
+        if (income > 23500000) return 480000;
+        // 通常区分（合計所得に応じた段階適用）
+        if (income <= 1320000)  return 950000;
+        if (income <= 3360000)  return 880000;
+        if (income <= 4890000)  return 680000;
+        if (income <= 6550000)  return 630000;
+        return 580000; // 655万超〜2,350万以下
+      }
+      return 0;
+    },
+    // 住民税 基礎控除（令和7年度：変更なし、43万円のまま）
+    basicRT: (income) => {
+      if (income <= 24000000) return 430000;
+      if (income <= 24500000) return 290000;
+      if (income <= 25000000) return 150000;
+      return 0;
+    },
+    itBrackets: [
+      { max: 1950000,  rate: 0.05, ded: 0 },
+      { max: 3300000,  rate: 0.10, ded: 97500 },
+      { max: 6950000,  rate: 0.20, ded: 427500 },
+      { max: 9000000,  rate: 0.23, ded: 636000 },
+      { max: 18000000, rate: 0.33, ded: 1536000 },
+      { max: 40000000, rate: 0.40, ded: 2796000 },
+      { max: Infinity, rate: 0.45, ded: 4796000 },
+    ],
+    recRate: 0.021,
+    rtRates: { mun: 0.06, pref: 0.04 },
+    rtFlat: { mun: 3000, pref: 1000, forest: 1000 },
+    spouseIT:  [[9000000, 380000, 480000], [9500000, 260000, 320000], [10000000, 130000, 160000]],
+    spouseRT:  [[9000000, 330000, 380000], [9500000, 220000, 260000], [10000000, 110000, 130000]],
+    ssIT: [ // 配偶者特別控除（所得税）[合計所得下限, 上限, 900万以下, 950万以下, 1000万以下]
+      [480000, 950000,  380000, 260000, 130000],
+      [950000, 1000000, 360000, 240000, 120000],
+      [1000000,1050000, 310000, 210000, 110000],
+      [1050000,1100000, 260000, 180000,  90000],
+      [1100000,1150000, 210000, 140000,  70000],
+      [1150000,1200000, 160000, 110000,  60000],
+      [1200000,1250000, 110000,  80000,  40000],
+      [1250000,1300000,  60000,  40000,  20000],
+      [1300000,1330000,  30000,  20000,  10000],
+    ],
+    ssRT: [ // 配偶者特別控除（住民税）
+      [480000, 1000000, 330000, 220000, 110000],
+      [1000000,1050000, 310000, 210000, 110000],
+      [1050000,1100000, 260000, 180000,  90000],
+      [1100000,1150000, 210000, 140000,  70000],
+      [1150000,1200000, 160000, 110000,  60000],
+      [1200000,1250000, 110000,  80000,  40000],
+      [1250000,1300000,  60000,  40000,  20000],
+      [1300000,1330000,  30000,  20000,  10000],
+    ],
+    depIT: { gen: 380000, spec: 630000, eldCo: 580000, eldOt: 480000 },
+    depRT: { gen: 330000, spec: 450000, eldCo: 450000, eldOt: 380000 },
+    disIT: { gen: 270000, sp: 400000, co: 750000 },
+    disRT: { gen: 260000, sp: 300000, co: 530000 },
+    spIT:  { singleParent: 350000, widow: 270000 },
+    spRT:  { singleParent: 300000, widow: 260000 },
+    swIT: 270000, swRT: 260000,
+  }
+};
+
+// ===================================================================
+// ユーティリティ
+// ===================================================================
+const fmt    = (n) => (n === null || n === undefined || isNaN(n)) ? '―' : n.toLocaleString('ja-JP') + ' 円';
+const fmtPct = (n) => (n * 100).toFixed(2) + ' %';
+const el     = (id) => document.getElementById(id);
+const set    = (id, v) => { const e = el(id); if (e) e.textContent = v; };
+const getN   = (id, def=0) => { const v = parseFloat(el(id)?.value ?? def); return isNaN(v) ? def : v; };
+const getI   = (id, def=0) => { const v = parseInt(el(id)?.value ?? def, 10); return isNaN(v) ? def : v; };
+const chk    = (id) => el(id)?.checked ?? false;
+
+// 生命保険料控除（新契約）
+const lifeIT_1 = (p) => p <= 0 ? 0 : p <= 20000 ? p : p <= 40000 ? Math.floor(p/2)+10000 : p <= 80000 ? Math.floor(p/4)+20000 : 40000;
+const lifeRT_1 = (p) => p <= 0 ? 0 : p <= 12000 ? p : p <= 32000 ? Math.floor(p/2)+6000 : p <= 56000 ? Math.floor(p/4)+14000 : 28000;
+
+// 協会けんぽ概算（東京都 令和7年）
+function estimateShaho(salary) {
+  const kenpo  = Math.round(Math.min(salary, 13950000) * 0.0499); // 健康保険 4.99%
+  const kousei = Math.round(Math.min(salary,  5502000) * 0.0915); // 厚生年金 9.15%
+  const koyo   = Math.round(salary * 0.006);                       // 雇用保険 0.6%
+  return kenpo + kousei + koyo;
+}
+
+// 公的年金等控除
+function pensionDed(income, age65, otherIncome) {
+  let red = otherIncome > 20000000 ? 200000 : otherIncome > 10000000 ? 100000 : 0;
+  if (age65) {
+    if (income <= 1100000) return Math.max(0, 1100000 - red);
+    if (income <= 3300000) return Math.max(0, income - 1100000 - red);
+    if (income <= 4100000) return Math.max(0, Math.floor(income * 0.75) - 275000 - red);
+    if (income <= 7700000) return Math.max(0, Math.floor(income * 0.85) - 685000 - red);
+    if (income <= 10000000) return Math.max(0, Math.floor(income * 0.95) - 1455000 - red);
+    return Math.max(0, income - 1955000 - red);
+  } else {
+    if (income <= 600000)  return Math.max(0, 600000 - red);
+    if (income <= 1300000) return Math.max(0, income - 600000 - red);
+    if (income <= 4100000) return Math.max(0, Math.floor(income * 0.75) - 275000 - red);
+    if (income <= 7700000) return Math.max(0, Math.floor(income * 0.85) - 685000 - red);
+    if (income <= 10000000) return Math.max(0, Math.floor(income * 0.95) - 1455000 - red);
+    return Math.max(0, income - 1955000 - red);
+  }
+}
+
+// 配偶者控除・配偶者特別控除
+function calcSpouseDed(myIncome, spouseTotalIncome, isElderly, bracketTable, specialTable) {
+  if (spouseTotalIncome <= 480000) {
+    // 配偶者控除
+    for (const [lim, normal, elderly] of bracketTable) {
+      if (myIncome <= lim) return isElderly ? elderly : normal;
+    }
+    return 0;
+  }
+  // 配偶者特別控除
+  const col = myIncome <= 9000000 ? 2 : myIncome <= 9500000 ? 3 : myIncome <= 10000000 ? 4 : -1;
+  if (col < 0) return 0;
+  for (const row of specialTable) {
+    if (spouseTotalIncome > row[0] && spouseTotalIncome <= row[1]) return row[col];
+  }
+  return 0;
+}
+
+// 配当控除
+function dividendCreditIT(income, taxableIncome) {
+  // 課税所得1000万以下: 10%, 超: 5%
+  if (taxableIncome <= 10000000) return Math.floor(income * 0.10);
+  const over = Math.min(income, taxableIncome - 10000000);
+  const under = Math.max(0, income - over);
+  return Math.floor(under * 0.10 + over * 0.05);
+}
+function dividendCreditRT(income, taxableIncome) {
+  if (taxableIncome <= 10000000) return Math.floor(income * 0.028);
+  const over = Math.min(income, taxableIncome - 10000000);
+  const under = Math.max(0, income - over);
+  return Math.floor(under * 0.028 + over * 0.014);
+}
+
+// ===================================================================
+// メイン計算
+// ===================================================================
+function calc() {
+  const r = RULES[2025];
+  const activeIncomes = getActiveIncomes();
+
+  // ---------- 各所得の計算 ----------
+  const salary     = activeIncomes.salary    ? getN('salary')     : 0;
+  const busRev     = activeIncomes.business  ? getN('business-rev') : 0;
+  const busExp     = activeIncomes.business  ? getN('business-exp') : 0;
+  const busAoiro   = activeIncomes.business  ? getN('business-aoiro') : 0;
+  const reRev      = activeIncomes.realestate ? getN('re-rev')     : 0;
+  const reExp      = activeIncomes.realestate ? getN('re-exp')     : 0;
+  const reAoiro    = activeIncomes.realestate ? getN('re-aoiro')   : 0;
+  const pensionRev = activeIncomes.pension   ? getN('pension-rev') : 0;
+  const age65      = el('pension-age')?.value === 'over65';
+  const miscRev    = activeIncomes.misc      ? getN('misc-rev')    : 0;
+  const miscExp    = activeIncomes.misc      ? getN('misc-exp')    : 0;
+  const tempRev    = activeIncomes.temporary ? getN('temp-rev')    : 0;
+  const tempExp    = activeIncomes.temporary ? getN('temp-exp')    : 0;
+  const stockRev   = activeIncomes.stock     ? getN('stock-rev')   : 0;
+  const stockCost  = activeIncomes.stock     ? getN('stock-cost')  : 0;
+  const stockLoss  = activeIncomes.stock     ? getN('stock-loss')  : 0;
+
+  // 配当所得 ── 上場株式等（申告分離 or 総合課税）と非上場株式等（総合課税のみ）に分離
+  const divListedMethod   = activeIncomes.dividend ? (el('div-listed-method')?.value ?? 'none')   : 'none';
+  const divUnlistedMethod = activeIncomes.dividend ? (el('div-unlisted-method')?.value ?? 'none') : 'none';
+  const divListedRev      = activeIncomes.dividend ? getN('div-listed-rev')   : 0;
+  const divUnlistedRev    = activeIncomes.dividend ? getN('div-unlisted-rev') : 0;
+  // 総所得に算入する配当（総合課税分のみ）
+  const divListedComp   = divListedMethod   === 'comprehensive' ? divListedRev   : 0;
+  const divUnlistedComp = divUnlistedMethod === 'comprehensive' ? divUnlistedRev : 0;
+  const divRev = divListedComp + divUnlistedComp; // 総合課税配当合計（配当控除の対象）
+  // 申告分離課税の上場配当（株式等譲渡損との損益通算対象）
+  const divListedSep = divListedMethod === 'separate' ? divListedRev : 0;
+
+  // 社会保険料
+  let shaho;
+  if (chk('auto-shaho')) {
+    shaho = estimateShaho(salary);
+    el('shaho').value = shaho;
+  } else {
+    shaho = getN('shaho');
+  }
+  const ideco = getN('ideco');
+
+  // 給与所得
+  const empDed = r.empDed(salary);
+  const has23under = chk('has23under-emp');
+  const disSpecial = chk('dis-sp') || chk('dis-co');
+  let highIncAdjDed = 0;
+  if (salary > 8500000 && (has23under || disSpecial)) {
+    highIncAdjDed = Math.min((salary - 8500000) * 0.1, 150000);
+  }
+  const empIncome = Math.max(0, salary - empDed - highIncAdjDed);
+
+  // 事業所得（損失あり得る）
+  const busIncome = busRev - busExp - Math.min(busAoiro, Math.max(0, busRev - busExp));
+
+  // 不動産所得（損失あり得る）
+  const reIncome = reRev - reExp - Math.min(reAoiro, Math.max(0, reRev - reExp));
+
+  // 年金雑所得（他の所得を仮計算してから控除計算）
+  const otherForPension = empIncome + Math.max(0, busIncome) + Math.max(0, reIncome);
+  const pensionDedAmt = pensionDed(pensionRev, age65, otherForPension);
+  const pensionIncome = Math.max(0, pensionRev - pensionDedAmt);
+
+  // その他雑所得
+  const miscIncome = Math.max(0, miscRev - miscExp);
+
+  // 一時所得（特別控除50万、1/2算入）
+  const tempRaw = Math.max(0, tempRev - tempExp - 500000);
+  const tempIncome = Math.floor(tempRaw / 2);
+
+  // 損益通算（事業・不動産の損失を給与等で相殺）
+  let businessLoss = Math.min(0, busIncome);  // 負の値
+  let reLoss       = Math.min(0, reIncome);   // 負の値
+  const positiveSources = empIncome + Math.max(0, busIncome) + Math.max(0, reIncome)
+                        + pensionIncome + miscIncome + divRev + tempIncome;
+  const netLoss = businessLoss + reLoss;
+  const totalIncomeBefore = Math.max(0, positiveSources + netLoss);
+
+  // 給与＋年金の所得金額調整控除
+  let dualAdjDed = 0;
+  if (empIncome > 0 && pensionIncome > 0) {
+    dualAdjDed = Math.min(Math.max(0, empIncome + pensionIncome - 100000), 100000);
+  }
+
+  const totalIncome = Math.max(0, totalIncomeBefore - dualAdjDed);
+
+  // ---------- 配偶者控除 ----------
+  const hasSpouse = chk('has-spouse');
+  const spSalary  = hasSpouse ? getN('spouse-salary') : 0;
+  const spShaho   = hasSpouse ? getN('spouse-shaho')  : 0;
+  const spOther   = hasSpouse ? getN('spouse-other')  : 0;
+  const spEldy    = chk('spouse-elderly');
+  const spEmpInc  = Math.max(0, spSalary - r.empDed(spSalary) - spShaho);
+  const spTotal   = hasSpouse ? Math.max(0, spEmpInc + spOther) : 0;
+
+  const spouseDedIT = hasSpouse ? calcSpouseDed(totalIncome, spTotal, spEldy, r.spouseIT, r.ssIT) : 0;
+  const spouseDedRT = hasSpouse ? calcSpouseDed(totalIncome, spTotal, spEldy, r.spouseRT, r.ssRT) : 0;
+
+  // ---------- 扶養控除 ----------
+  const depGeneral = getI('dep-general');
+  const depSpecific= getI('dep-specific');
+  const depEldCo   = getI('dep-eld-co');
+  const depEldOt   = getI('dep-eld-ot');
+
+  const depDedIT = depGeneral * r.depIT.gen + depSpecific * r.depIT.spec
+                 + depEldCo * r.depIT.eldCo + depEldOt * r.depIT.eldOt;
+  const depDedRT = depGeneral * r.depRT.gen + depSpecific * r.depRT.spec
+                 + depEldCo * r.depRT.eldCo + depEldOt * r.depRT.eldOt;
+
+  // ---------- 障害者控除 ----------
+  const disGenN = chk('dis-gen') ? getI('dis-gen-n', 1) : 0;
+  const disSpN  = chk('dis-sp')  ? getI('dis-sp-n',  1) : 0;
+  const disCoN  = chk('dis-co')  ? getI('dis-co-n',  1) : 0;
+
+  const disDedIT = disGenN * r.disIT.gen + disSpN * r.disIT.sp + disCoN * r.disIT.co;
+  const disDedRT = disGenN * r.disRT.gen + disSpN * r.disRT.sp + disCoN * r.disRT.co;
+
+  // ---------- その他控除 ----------
+  const spDedIT = chk('single-parent') ? r.spIT.singleParent : chk('widow') ? r.spIT.widow : 0;
+  const spDedRT = chk('single-parent') ? r.spRT.singleParent : chk('widow') ? r.spRT.widow : 0;
+  const swDedIT = chk('student-worker') ? r.swIT : 0;
+  const swDedRT = chk('student-worker') ? r.swRT : 0;
+
+  // ---------- 生命保険料控除 ----------
+  const lifeGen  = getN('life-gen');
+  const lifeCare = getN('life-care');
+  const lifePens = getN('life-pension');
+  const lifeDedIT = Math.min(lifeIT_1(lifeGen) + lifeIT_1(lifeCare) + lifeIT_1(lifePens), 120000);
+  const lifeDedRT = Math.min(lifeRT_1(lifeGen) + lifeRT_1(lifeCare) + lifeRT_1(lifePens), 70000);
+
+  // ---------- 地震保険料控除 ----------
+  const eqIns   = getN('earthquake-ins');
+  const eqDedIT = Math.min(eqIns, 50000);
+  const eqDedRT = Math.min(eqIns, 25000);
+
+  // ---------- 申告分離課税の事前計算（医療費・寄附金控除の足切り計算に使用） ----------
+  const stockGainRaw  = stockRev - stockCost - stockLoss;
+  const netSeparate   = stockGainRaw + divListedSep;
+  const taxableSep    = Math.max(0, netSeparate);
+  const stockTaxITRaw = Math.floor(taxableSep * 0.15);
+
+  // ---------- 医療費控除 ----------
+  const medPaid    = getN('medical-paid');
+  const medCovered = getN('medical-covered');
+  const totalIncomeForThreshold = totalIncome + taxableSep; // 申告分離含む「総所得金額等」
+  const medThresh  = Math.min(totalIncomeForThreshold * 0.05, 100000);
+  const medDed     = Math.max(0, Math.min(medPaid - medCovered - medThresh, 2000000));
+
+  // ---------- 寄附金控除 ----------
+  const donTotal = getN('donation');
+  const donDed   = Math.max(0, Math.min(donTotal, totalIncomeForThreshold * 0.4) - 2000);
+
+  // ---------- 住宅ローン控除 ----------
+  const housingLoan = getN('housing-loan');
+
+  // ---------- 所得税計算 ----------
+  const basicIT = r.basicIT(totalIncome);
+  const totalDedIT = shaho + ideco + lifeDedIT + eqDedIT + spouseDedIT + depDedIT
+                   + disDedIT + spDedIT + swDedIT + medDed + donDed + basicIT;
+
+  const taxableIT = Math.max(0, Math.floor((totalIncome - totalDedIT) / 1000) * 1000);
+
+  let itBase = 0, itRate = 0;
+  for (const b of r.itBrackets) {
+    if (taxableIT <= b.max) { itBase = Math.max(0, Math.floor(taxableIT * b.rate - b.ded)); itRate = b.rate; break; }
+  }
+
+  // 配当控除（総合課税の場合）
+  const divCreditIT = divRev > 0
+    ? dividendCreditIT(divRev, taxableIT) : 0;
+
+  const housingFromIT    = Math.min(housingLoan, Math.max(0, itBase - divCreditIT));
+  const housingFromSepIT = Math.min(housingLoan - housingFromIT, stockTaxITRaw);
+  const housingUsed      = housingFromIT + housingFromSepIT;
+  const incomeTax = Math.max(0, Math.floor((itBase - divCreditIT - housingFromIT) / 100) * 100);
+  const recTax    = Math.floor(incomeTax * r.recRate);
+  const totalIT   = incomeTax + recTax;
+
+  // ---------- 住民税計算 ----------
+  const basicRT = r.basicRT(totalIncome);
+  const totalDedRT = shaho + ideco + lifeDedRT + eqDedRT + spouseDedRT + depDedRT
+                   + disDedRT + spDedRT + swDedRT + medDed + donDed + basicRT;
+
+  const taxableRT = Math.max(0, Math.floor((totalIncome - totalDedRT) / 1000) * 1000);
+  const munInc    = Math.floor(taxableRT * r.rtRates.mun / 100) * 100;
+  const prefInc   = Math.floor(taxableRT * r.rtRates.pref / 100) * 100;
+  const incomeShareRT = munInc + prefInc;
+
+  const divCreditRT = divRev > 0
+    ? dividendCreditRT(divRev, taxableRT) : 0;
+
+  const housingRT = Math.max(0, Math.min(housingLoan - Math.max(0, housingIT), incomeShareRT - divCreditRT));
+  const adjustedRT = Math.max(0, incomeShareRT - divCreditRT - housingRT);
+
+  const flatRT   = r.rtFlat.mun + r.rtFlat.pref;
+  const forestRT = r.rtFlat.forest;
+  const totalRT  = adjustedRT + flatRT + forestRT;
+
+  // ---------- 申告分離課税：株式等譲渡所得 ＋ 上場株式等配当（損益通算） ----------
+  const stockGainRaw   = stockRev - stockCost - stockLoss; // 繰越損失控除後（負の場合あり）
+  const netSeparate    = stockGainRaw + divListedSep;       // 上場配当（申告分離）と損益通算
+  const taxableSep     = Math.max(0, netSeparate);
+  const stockTaxIT     = Math.floor(taxableSep * 0.15);
+  const stockTaxRec    = Math.floor(taxableSep * 0.00315);
+  const stockTaxRT     = Math.floor(taxableSep * 0.05);
+  const stockTaxTotal  = stockTaxIT + stockTaxRec + stockTaxRT;
+
+  const grandTotal = totalIT + totalRT + stockTaxTotal;
+
+  // ===================================================================
+  // UI更新
+  // ===================================================================
+
+  // --- まとめタブ ---
+  const baseSalary = salary || 1; // 実効税率計算用
+  set('total-tax-display', fmt(grandTotal));
+  set('total-tax-sub', `所得税 ${totalIT.toLocaleString()} 円 ＋ 住民税 ${totalRT.toLocaleString()} 円` +
+    (stockTaxTotal > 0 ? ` ＋ 分離課税 ${stockTaxTotal.toLocaleString()} 円` : ''));
+  set('s-it', fmt(totalIT));
+  set('s-rt', fmt(totalRT));
+  set('s-st', stockTaxTotal > 0 ? fmt(stockTaxTotal) : '―');
+  set('s-total', fmt(grandTotal));
+
+  // 所得内訳行
+  const incomeRows = [
+    ['給与所得', empIncome, activeIncomes.salary],
+    ['事業所得', busIncome, activeIncomes.business],
+    ['不動産所得', reIncome, activeIncomes.realestate],
+    ['公的年金（雑所得）', pensionIncome, activeIncomes.pension],
+    ['雑所得（その他）', miscIncome, activeIncomes.misc],
+    ['配当所得（総合課税）', divRev, activeIncomes.dividend && divRev > 0],
+    ['一時所得（算入額）', tempIncome, activeIncomes.temporary],
+  ];
+  const buildRows = (containerId) => {
+    const c = el(containerId);
+    if (!c) return;
+    c.innerHTML = '';
+    incomeRows.forEach(([label, val, active]) => {
+      if (!active) return;
+      const row = document.createElement('div');
+      row.className = 'result-row' + (val < 0 ? ' loss-row' : '');
+      row.innerHTML = `<span class="lbl">${label}</span><span class="val ${val < 0 ? '' : ''}">${val < 0 ? '▲ ' + fmt(Math.abs(val)) : fmt(val)}</span>`;
+      c.appendChild(row);
+    });
+  };
+  buildRows('income-breakdown-rows');
+  buildRows('it-income-rows');
+
+  const dualVisible = dualAdjDed > 0;
+  ['dual-adj-row', 'it-dual-adj-row'].forEach(id => {
+    const e = el(id); if (e) e.style.display = dualVisible ? '' : 'none';
+  });
+  if (dualVisible) {
+    set('s-dual-adj', '▲ ' + fmt(dualAdjDed));
+    set('it-dual-adj', '▲ ' + fmt(dualAdjDed));
+  }
+
+  set('s-total-income', fmt(totalIncome));
+  set('s-taxable-it', fmt(taxableIT));
+  set('s-taxable-rt', fmt(taxableRT));
+  set('s-eff-it', fmtPct(totalIT / baseSalary));
+  set('s-eff-rt', fmtPct(totalRT / baseSalary));
+  set('s-eff-total', fmtPct(grandTotal / baseSalary));
+
+  // --- 所得税タブ ---
+  set('it-total-income', fmt(totalIncome));
+  const negOrZero = (v) => v > 0 ? '▲ ' + fmt(v) : '0 円';
+  set('it-shaho', negOrZero(shaho));
+  set('it-ideco', negOrZero(ideco));
+  set('it-life', negOrZero(lifeDedIT));
+  set('it-eq', negOrZero(eqDedIT));
+  set('it-spouse', negOrZero(spouseDedIT));
+  set('it-dep', negOrZero(depDedIT));
+  set('it-dis', negOrZero(disDedIT));
+  set('it-sp', negOrZero(spDedIT));
+  set('it-sw', negOrZero(swDedIT));
+  set('it-med', negOrZero(medDed));
+  set('it-don', negOrZero(donDed));
+  set('it-basic', negOrZero(basicIT));
+  set('it-ded-total', fmt(totalDedIT));
+  set('it-taxable', fmt(taxableIT));
+  set('it-rate', (itRate * 100).toFixed(0) + ' %');
+  set('it-base', fmt(itBase));
+  set('it-div-ded', divCreditIT > 0 ? '▲ ' + fmt(divCreditIT) : '0 円');
+  set('it-housing', housingIT > 0 ? '▲ ' + fmt(Math.max(0, housingIT)) : '0 円');
+  set('it-tax', fmt(incomeTax));
+  set('it-rec', fmt(recTax));
+  set('it-total', fmt(totalIT));
+
+  // --- 住民税タブ ---
+  set('rt-total-income', fmt(totalIncome));
+  set('rt-shaho', negOrZero(shaho));
+  set('rt-ideco', negOrZero(ideco));
+  set('rt-life', negOrZero(lifeDedRT));
+  set('rt-eq', negOrZero(eqDedRT));
+  set('rt-spouse', negOrZero(spouseDedRT));
+  set('rt-dep', negOrZero(depDedRT));
+  set('rt-dis', negOrZero(disDedRT));
+  set('rt-sp', negOrZero(spDedRT));
+  set('rt-sw', negOrZero(swDedRT));
+  set('rt-med', negOrZero(medDed));
+  set('rt-don', negOrZero(donDed));
+  set('rt-basic', negOrZero(basicRT));
+  set('rt-ded-total', fmt(totalDedRT));
+  set('rt-taxable', fmt(taxableRT));
+  set('rt-mun', fmt(munInc));
+  set('rt-pref', fmt(prefInc));
+  set('rt-div-ded', divCreditRT > 0 ? '▲ ' + fmt(divCreditRT) : '0 円');
+  set('rt-housing', housingRT > 0 ? '▲ ' + fmt(housingRT) : '0 円');
+  set('rt-income-tax', fmt(adjustedRT));
+  set('rt-flat', fmt(flatRT));
+  set('rt-forest', fmt(forestRT));
+  set('rt-total', fmt(totalRT));
+
+  // --- 分離課税タブ ---
+  const hasStock    = activeIncomes.stock && (stockRev > 0 || stockLoss > 0);
+  const hasDivSep   = activeIncomes.dividend && divListedSep > 0;
+  const hasSeparate = hasStock || hasDivSep;
+  el('no-separate-msg').style.display      = hasSeparate ? 'none' : '';
+  el('stock-result').style.display          = 'none'; // 統合ボックスに置換
+  el('dividend-separate-result').style.display = hasSeparate ? '' : 'none';
+
+  if (hasSeparate) {
+    const gainLabel = stockGainRaw < 0
+      ? '▲ ' + fmt(Math.abs(stockGainRaw)) + '（損失）'
+      : fmt(stockGainRaw);
+    set('div-sep-stock-gain', activeIncomes.stock ? gainLabel : '0 円');
+    set('div-sep-rev',     hasDivSep ? fmt(divListedSep) : '0 円');
+    set('div-sep-taxable', fmt(taxableSep));
+    set('div-sep-it',      fmt(stockTaxIT));
+    set('div-sep-rec',     fmt(stockTaxRec));
+    set('div-sep-rt',      fmt(stockTaxRT));
+    set('div-sep-total',   fmt(stockTaxTotal));
+  }
+}
+
+// ===================================================================
+// UI操作
+// ===================================================================
+const incomeActive = {
+  salary: true, business: false, realestate: false, pension: false,
+  misc: false, dividend: false, temporary: false, stock: false
+};
+
+function getActiveIncomes() { return { ...incomeActive }; }
+
+function toggleIncome(key) {
+  incomeActive[key] = !incomeActive[key];
+  el('btn-' + key).classList.toggle('active', incomeActive[key]);
+  el('block-' + key).style.display = incomeActive[key] ? '' : 'none';
+}
+
+function toggleSection(header) {
+  const body = header.nextElementSibling;
+  const open = header.classList.contains('open');
+  body.classList.toggle('hidden-body', open);
+  if (open) body.style.display = '';
+  header.classList.toggle('open', !open);
+}
+
+function switchTab(name) {
+  const names = ['summary','income','resident','separate'];
+  document.querySelectorAll('.tab-btn').forEach((b, i) => b.classList.toggle('active', names[i] === name));
+  document.querySelectorAll('.tab-content').forEach(c => c.classList.remove('active'));
+  el('tab-' + name).classList.add('active');
+}
+
+function toggleSpouseFields() {
+  el('spouse-fields').style.display = chk('has-spouse') ? '' : 'none';
+}
+
+function toggleAutoShaho() {
+  const auto = chk('auto-shaho');
+  el('shaho-manual').style.display = auto ? 'none' : '';
+  el('shaho-auto').style.display   = auto ? '' : 'none';
+  el('shaho').readOnly = auto;
+}
+
+function showCount(id) {
+  el('cnt-' + id).style.display = chk(id) ? '' : 'none';
+}
+
+function updateDividendFields() {
+  const listedMethod   = el('div-listed-method')?.value   ?? 'none';
+  const unlistedMethod = el('div-unlisted-method')?.value ?? 'none';
+  el('div-listed-fields').style.display   = listedMethod   !== 'none' ? '' : 'none';
+  el('div-unlisted-fields').style.display = unlistedMethod !== 'none' ? '' : 'none';
+}
+
+// セクションの初期状態（body を正しく設定）
+document.querySelectorAll('.section-header.open').forEach(h => {
+  h.nextElementSibling.classList.remove('hidden-body');
+});
+
+function runCalc() {
+  calc();
+  el('result-placeholder').style.display = 'none';
+  el('result-body').style.display = '';
+}
+</script>
+</body>
+</html>
