@@ -365,6 +365,24 @@
           <div class="input-with-unit"><input type="number" id="div-unlisted-rev" value="0" min="0" step="10000"><span class="unit">円</span></div>
         </div>
       </div>
+
+      <div class="divider-label" style="margin-top:14px">③ 公社債投資信託等の利子・配当等</div>
+      <div class="hint" style="margin-bottom:8px">MRF・MMF・特定公社債（国債等）の利子・分配金。申告分離課税のみ（配当控除不可）。株式等の譲渡損失と損益通算できます。</div>
+      <div class="field-row">
+        <div><label>申告方式</label></div>
+        <div class="input-with-unit">
+          <select id="div-bond-method" onchange="updateDividendFields()">
+            <option value="none">申告しない（源泉徴収で完了）</option>
+            <option value="separate">申告分離課税（譲渡損失と損益通算可）</option>
+          </select>
+        </div>
+      </div>
+      <div id="div-bond-fields" style="display:none">
+        <div class="field-row">
+          <div><label>公社債投資信託等の収益</label></div>
+          <div class="input-with-unit"><input type="number" id="div-bond-rev" value="0" min="0" step="10000"><span class="unit">円</span></div>
+        </div>
+      </div>
     </div>
 
     <!-- 一時所得 -->
@@ -736,9 +754,10 @@
     </div>
     <div id="dividend-separate-result" style="display:none">
       <div class="separate-tax-box">
-        <div class="stb-title">📊 上場株式等の配当等（申告分離課税）＋ 株式等譲渡所得の損益通算</div>
+        <div class="stb-title">📊 申告分離課税（上場配当・公社債等）＋ 株式等譲渡所得の損益通算</div>
         <div class="result-row sub"><span class="lbl">株式等の譲渡所得</span><span class="val" id="div-sep-stock-gain">―</span></div>
-        <div class="result-row sub"><span class="lbl">上場株式等の配当等</span><span class="val" id="div-sep-rev">―</span></div>
+        <div class="result-row sub"><span class="lbl">① 上場株式等の配当等</span><span class="val" id="div-sep-rev">―</span></div>
+        <div class="result-row sub"><span class="lbl">③ 公社債投資信託等</span><span class="val" id="div-sep-bond-rev">―</span></div>
         <div class="result-row total"><span class="lbl">損益通算後 課税金額</span><span class="val" id="div-sep-taxable">―</span></div>
         <hr class="sep">
         <div class="result-row sub"><span class="lbl">所得税（15%）</span><span class="val" id="div-sep-it">―</span></div>
@@ -940,17 +959,20 @@ function calc() {
   const stockCost  = activeIncomes.stock     ? getN('stock-cost')  : 0;
   const stockLoss  = activeIncomes.stock     ? getN('stock-loss')  : 0;
 
-  // 配当所得 ── 上場株式等（申告分離 or 総合課税）と非上場株式等（総合課税のみ）に分離
-  const divListedMethod   = activeIncomes.dividend ? (el('div-listed-method')?.value ?? 'none')   : 'none';
+  // 配当所得 ── ①上場株式等（申告分離 or 総合課税）、②非上場株式等（総合課税のみ）、③公社債投資信託等（申告分離のみ）
+  const divListedMethod   = activeIncomes.dividend ? (el('div-listed-method')?.value   ?? 'none') : 'none';
   const divUnlistedMethod = activeIncomes.dividend ? (el('div-unlisted-method')?.value ?? 'none') : 'none';
+  const divBondMethod     = activeIncomes.dividend ? (el('div-bond-method')?.value     ?? 'none') : 'none';
   const divListedRev      = activeIncomes.dividend ? getN('div-listed-rev')   : 0;
   const divUnlistedRev    = activeIncomes.dividend ? getN('div-unlisted-rev') : 0;
-  // 総所得に算入する配当（総合課税分のみ）
+  const divBondRev        = activeIncomes.dividend ? getN('div-bond-rev')     : 0;
+  // 総所得に算入する配当（総合課税分のみ・配当控除の対象）
   const divListedComp   = divListedMethod   === 'comprehensive' ? divListedRev   : 0;
   const divUnlistedComp = divUnlistedMethod === 'comprehensive' ? divUnlistedRev : 0;
-  const divRev = divListedComp + divUnlistedComp; // 総合課税配当合計（配当控除の対象）
-  // 申告分離課税の上場配当（株式等譲渡損との損益通算対象）
+  const divRev = divListedComp + divUnlistedComp;
+  // 申告分離課税分（株式等譲渡損との損益通算対象）
   const divListedSep = divListedMethod === 'separate' ? divListedRev : 0;
+  const divBondSep   = divBondMethod   === 'separate' ? divBondRev   : 0;
 
   // 社会保険料
   let shaho;
@@ -1057,7 +1079,7 @@ function calc() {
 
   // ---------- 申告分離課税の事前計算（医療費・寄附金控除の足切り計算に使用） ----------
   const stockGainRaw  = stockRev - stockCost - stockLoss;
-  const netSeparate   = stockGainRaw + divListedSep;
+  const netSeparate   = stockGainRaw + divListedSep + divBondSep;
   const taxableSep    = Math.max(0, netSeparate);
   const stockTaxITRaw = Math.floor(taxableSep * 0.15);
 
@@ -1234,7 +1256,7 @@ function calc() {
 
   // --- 分離課税タブ ---
   const hasStock    = activeIncomes.stock && (stockRev > 0 || stockLoss > 0);
-  const hasDivSep   = activeIncomes.dividend && divListedSep > 0;
+  const hasDivSep   = activeIncomes.dividend && (divListedSep > 0 || divBondSep > 0);
   const hasSeparate = hasStock || hasDivSep;
   el('no-separate-msg').style.display      = hasSeparate ? 'none' : '';
   el('stock-result').style.display          = 'none'; // 統合ボックスに置換
@@ -1245,7 +1267,8 @@ function calc() {
       ? '▲ ' + fmt(Math.abs(stockGainRaw)) + '（損失）'
       : fmt(stockGainRaw);
     set('div-sep-stock-gain', activeIncomes.stock ? gainLabel : '0 円');
-    set('div-sep-rev',     hasDivSep ? fmt(divListedSep) : '0 円');
+    set('div-sep-rev',      divListedSep > 0 ? fmt(divListedSep) : '0 円');
+    set('div-sep-bond-rev', divBondSep   > 0 ? fmt(divBondSep)   : '0 円');
     set('div-sep-taxable', fmt(taxableSep));
     set('div-sep-it',      fmt(stockTaxITFinal));
     set('div-sep-rec',     fmt(stockTaxRec));
@@ -1303,14 +1326,64 @@ function showCount(id) {
 function updateDividendFields() {
   const listedMethod   = el('div-listed-method')?.value   ?? 'none';
   const unlistedMethod = el('div-unlisted-method')?.value ?? 'none';
+  const bondMethod     = el('div-bond-method')?.value     ?? 'none';
   el('div-listed-fields').style.display   = listedMethod   !== 'none' ? '' : 'none';
   el('div-unlisted-fields').style.display = unlistedMethod !== 'none' ? '' : 'none';
+  el('div-bond-fields').style.display     = bondMethod     !== 'none' ? '' : 'none';
 }
 
 // セクションの初期状態（body を正しく設定）
 document.querySelectorAll('.section-header.open').forEach(h => {
   h.nextElementSibling.classList.remove('hidden-body');
 });
+
+// ===================================================================
+// localStorage による入力値の自動保存・復元
+// ===================================================================
+const STORAGE_KEY = 'tax-calc-state-v1';
+
+function saveState() {
+  const state = { incomes: { ...incomeActive }, inputs: {} };
+  document.querySelectorAll('input[id], select[id]').forEach(inp => {
+    state.inputs[inp.id] = inp.type === 'checkbox' ? inp.checked : inp.value;
+  });
+  localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
+}
+
+function restoreState() {
+  const raw = localStorage.getItem(STORAGE_KEY);
+  if (!raw) return;
+  try {
+    const state = JSON.parse(raw);
+    // 所得種別ボタンの復元
+    if (state.incomes) {
+      Object.keys(state.incomes).forEach(key => {
+        if (key in incomeActive && state.incomes[key] !== incomeActive[key]) toggleIncome(key);
+      });
+    }
+    // 入力値の復元
+    if (state.inputs) {
+      Object.keys(state.inputs).forEach(id => {
+        const inp = document.getElementById(id);
+        if (!inp) return;
+        if (inp.type === 'checkbox') inp.checked = state.inputs[id];
+        else inp.value = state.inputs[id];
+      });
+    }
+    // UI の表示状態を再同期
+    toggleSpouseFields();
+    toggleAutoShaho();
+    updateDividendFields();
+    ['dis-gen', 'dis-sp', 'dis-co'].forEach(id => showCount(id));
+  } catch (e) { /* 破損データは無視 */ }
+}
+
+// 入力変更があるたびに保存（イベント委譲）
+document.addEventListener('input',  saveState);
+document.addEventListener('change', saveState);
+
+// ページ読み込み時に復元
+restoreState();
 
 function runCalc() {
   calc();
