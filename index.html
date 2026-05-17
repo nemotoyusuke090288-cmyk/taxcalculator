@@ -174,17 +174,20 @@
 <header>
   <div class="title-row">
     <h1>所得税・住民税 計算アプリ</h1>
-    <span class="badge">令和7年分（2025年）</span>
+    <span id="year-badge" class="badge">令和7年分（2025年）</span>
     <span class="badge">東京都小金井市</span>
     <div class="year-selector">
       <label>年度</label>
-      <select id="year-select"><option value="2025" selected>2025年（令和7年）分</option></select>
+      <select id="year-select" onchange="onYearChange()">
+        <option value="2025" selected>2025年（令和7年）分</option>
+        <option value="2026">2026年（令和8年）分</option>
+      </select>
     </div>
   </div>
   <div class="meta">※ 試算ツールです。確定申告の際は国税庁の公式資料をご確認ください。</div>
 </header>
 
-<div class="notice">
+<div class="notice" id="year-notice">
   ⚠️ <strong>令和7年度税制改正（令和7〜8年分 時限措置）</strong>：
   ①所得税の基礎控除が所得に応じて<strong>58〜95万円</strong>に拡大（合計所得655万円超は58万円）。
   ②住民税の基礎控除は<strong>変更なし（43万円）</strong>。
@@ -699,7 +702,7 @@
   <!-- 住民税 -->
   <div id="tab-resident" class="tab-content">
     <div class="hint" style="margin-bottom:10px;padding:8px;background:var(--blue-50);border-radius:6px;font-size:11px">
-      令和7年分の所得をもとに、令和8年度（2026年6月〜）に徴収される住民税を計算します。
+      <span id="rt-year-hint">令和7年分の所得をもとに、令和8年度（2026年6月〜）に徴収される住民税</span>を計算します。
     </div>
     <div class="result-section">
       <h3>所得・控除の計算</h3>
@@ -855,6 +858,84 @@ const RULES = {
     spIT:  { singleParent: 350000, widow: 270000 },
     spRT:  { singleParent: 300000, widow: 260000 },
     swIT: 270000, swRT: 260000,
+  },
+
+  2026: {
+    // 給与所得控除（令和8・9年分）
+    // 最低保証：74万円（本則69万+特例5万）、収入220万円以下に適用
+    // 220万円超の計算式は令和7年と同様（暫定）
+    empDed: (y) => {
+      if (y < 741000)   return y;
+      if (y <= 2200000) return 740000;
+      const q4 = Math.floor(y / 4000);
+      if (y <= 3600000) return y - (q4 * 2800 - 80000);
+      if (y <= 6600000) return y - (q4 * 3200 - 440000);
+      if (y <= 8500000) return y - (Math.floor(y * 9 / 10) - 1100000);
+      return 1950000;
+    },
+    // 所得税 基礎控除（令和8年分）
+    // 3段階：489万以下104万、655万以下67万、655万超62万（令和9年以降は一律62万）
+    basicIT: (income) => {
+      if (income <= 25000000) {
+        if (income > 24500000) return 200000; // 62万 - 42万（推定）
+        if (income > 24000000) return 360000; // 62万 - 26万（推定）
+        if (income > 23500000) return 520000; // 62万 - 10万（推定）
+        if (income <= 4890000)  return 1040000; // 104万（所得489万以下）
+        if (income <= 6550000)  return 670000;  // 67万（所得655万以下）
+        return 620000;                           // 62万（所得655万超〜2,350万以下）
+      }
+      return 0;
+    },
+    // 住民税 基礎控除（令和8年度：変更なし）
+    basicRT: (income) => {
+      if (income <= 24000000) return 430000;
+      if (income <= 24500000) return 290000;
+      if (income <= 25000000) return 150000;
+      return 0;
+    },
+    // 以下は令和7年と同様（暫定）
+    itBrackets: [
+      { max: 1950000,  rate: 0.05, ded: 0 },
+      { max: 3300000,  rate: 0.10, ded: 97500 },
+      { max: 6950000,  rate: 0.20, ded: 427500 },
+      { max: 9000000,  rate: 0.23, ded: 636000 },
+      { max: 18000000, rate: 0.33, ded: 1536000 },
+      { max: 40000000, rate: 0.40, ded: 2796000 },
+      { max: Infinity, rate: 0.45, ded: 4796000 },
+    ],
+    recRate: 0.021,
+    rtRates: { mun: 0.06, pref: 0.04 },
+    rtFlat:  { mun: 3000, pref: 1000, forest: 1000 },
+    spouseIT:  [[9000000, 380000, 480000], [9500000, 260000, 320000], [10000000, 130000, 160000]],
+    spouseRT:  [[9000000, 330000, 380000], [9500000, 220000, 260000], [10000000, 110000, 130000]],
+    ssIT: [
+      [480000, 950000,  380000, 260000, 130000],
+      [950000, 1000000, 360000, 240000, 120000],
+      [1000000,1050000, 310000, 210000, 110000],
+      [1050000,1100000, 260000, 180000,  90000],
+      [1100000,1150000, 210000, 140000,  70000],
+      [1150000,1200000, 160000, 110000,  60000],
+      [1200000,1250000, 110000,  80000,  40000],
+      [1250000,1300000,  60000,  40000,  20000],
+      [1300000,1330000,  30000,  20000,  10000],
+    ],
+    ssRT: [
+      [480000, 1000000, 330000, 220000, 110000],
+      [1000000,1050000, 310000, 210000, 110000],
+      [1050000,1100000, 260000, 180000,  90000],
+      [1100000,1150000, 210000, 140000,  70000],
+      [1150000,1200000, 160000, 110000,  60000],
+      [1200000,1250000, 110000,  80000,  40000],
+      [1250000,1300000,  60000,  40000,  20000],
+      [1300000,1330000,  30000,  20000,  10000],
+    ],
+    depIT: { gen: 380000, spec: 630000, eldCo: 580000, eldOt: 480000 },
+    depRT: { gen: 330000, spec: 450000, eldCo: 450000, eldOt: 380000 },
+    disIT: { gen: 270000, sp: 400000, co: 750000 },
+    disRT: { gen: 260000, sp: 300000, co: 530000 },
+    spIT:  { singleParent: 350000, widow: 270000 },
+    spRT:  { singleParent: 300000, widow: 260000 },
+    swIT: 270000, swRT: 260000,
   }
 };
 
@@ -938,7 +1019,7 @@ function dividendCreditRT(income, taxableIncome) {
 // メイン計算
 // ===================================================================
 function calc() {
-  const r = RULES[2025];
+  const r = RULES[parseInt(el('year-select').value)];
   const activeIncomes = getActiveIncomes();
 
   // ---------- 各所得の計算 ----------
@@ -1321,6 +1402,28 @@ function toggleAutoShaho() {
 
 function showCount(id) {
   el('cnt-' + id).style.display = chk(id) ? '' : 'none';
+}
+
+const YEAR_META = {
+  2025: {
+    badge: '令和7年分（2025年）',
+    notice: '⚠️ <strong>令和7年度税制改正（令和7〜8年分 時限措置）</strong>：①所得税の基礎控除が所得に応じて<strong>58〜95万円</strong>に拡大（合計所得655万円超は58万円）。②住民税の基礎控除は<strong>変更なし（43万円）</strong>。③給与所得控除の最低保証額が<strong>55万→65万円</strong>に引き上げ（190万円以下に適用拡大）。',
+    rtHint: '令和7年分の所得をもとに、令和8年度（2026年6月〜）に徴収される住民税',
+  },
+  2026: {
+    badge: '令和8年分（2026年）',
+    notice: '⚠️ <strong>令和8年度税制改正</strong>：①所得税の基礎控除が<strong>62〜104万円</strong>（所得489万円以下は104万円、655万円以下は67万円、655万円超は62万円）。②住民税の基礎控除は<strong>変更なし（43万円）</strong>。③給与所得控除の最低保証額が<strong>65万→74万円</strong>（220万円以下に適用）。※一部暫定値を含みます。',
+    rtHint: '令和8年分の所得をもとに、令和9年度（2027年6月〜）に徴収される住民税',
+  },
+};
+
+function onYearChange() {
+  const year = parseInt(el('year-select').value);
+  const m = YEAR_META[year];
+  if (!m) return;
+  el('year-badge').textContent  = m.badge;
+  el('year-notice').innerHTML   = m.notice;
+  el('rt-year-hint').textContent = m.rtHint;
 }
 
 function updateDividendFields() {
