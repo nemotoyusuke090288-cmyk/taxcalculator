@@ -727,6 +727,7 @@
       <div class="result-row"><span class="lbl">課税所得（1,000円未満切捨）</span><span class="val" id="rt-taxable">―</span></div>
       <div class="result-row sub"><span class="lbl">市民税所得割（×6%）</span><span class="val" id="rt-mun">―</span></div>
       <div class="result-row sub"><span class="lbl">都民税所得割（×4%）</span><span class="val" id="rt-pref">―</span></div>
+      <div class="result-row sub"><span class="lbl">調整控除</span><span class="val negative" id="rt-adjust">―</span></div>
       <div class="result-row sub"><span class="lbl">配当控除</span><span class="val negative" id="rt-div-ded">―</span></div>
       <div class="result-row sub"><span class="lbl">住宅ローン控除</span><span class="val negative" id="rt-housing">―</span></div>
       <div class="result-row"><span class="lbl">所得割合計</span><span class="val" id="rt-income-tax">―</span></div>
@@ -1001,6 +1002,25 @@ function calcSpouseDed(myIncome, spouseTotalIncome, isElderly, bracketTable, spe
   return 0;
 }
 
+// 住民税の調整控除（人的控除額の差の合計に基づく税額控除。地方税法第37条/314条の6）
+// diffs: 各人的控除の「所得税控除額 − 住民税控除額」（配偶者・扶養・障害者・ひとり親等）
+function calcAdjustmentRT(totalIncome, taxableRT, diffs) {
+  if (totalIncome > 25000000) return 0; // 合計所得2,500万円超は調整控除の対象外
+  // 基礎控除の人的控除差は法定差額（令和7〜8年の時限的引上げは反映せず）
+  let basicDiff = 50000;
+  if (totalIncome > 24500000)      basicDiff = 10000;
+  else if (totalIncome > 24000000) basicDiff = 30000;
+  const persDiff = basicDiff
+                 + Math.max(0, diffs.spouse) + Math.max(0, diffs.dep)
+                 + Math.max(0, diffs.dis)    + Math.max(0, diffs.sp)
+                 + Math.max(0, diffs.sw);
+  if (persDiff <= 0) return 0;
+  let base;
+  if (taxableRT <= 2000000) base = Math.min(persDiff, taxableRT);
+  else                      base = Math.max(persDiff - (taxableRT - 2000000), 50000);
+  return Math.floor(base * 0.05); // 市民税3% + 都民税2%
+}
+
 // 配当控除
 function dividendCreditIT(income, taxableIncome) {
   // 課税所得1000万以下: 10%, 超: 5%
@@ -1222,8 +1242,17 @@ function calc() {
   const divCreditRT = divRev > 0
     ? dividendCreditRT(divRev, taxableRT) : 0;
 
-  const housingRT = Math.max(0, Math.min(housingLoan - housingUsed, incomeShareRT - divCreditRT));
-  const adjustedRT = Math.max(0, incomeShareRT - divCreditRT - housingRT);
+  // 調整控除（人的控除額の差に基づく住民税の税額控除。所得税の前に適用）
+  const adjustmentRT = calcAdjustmentRT(totalIncome, taxableRT, {
+    spouse: (hasSpouse && spTotal <= 500000) ? (spouseDedIT - spouseDedRT) : 0,
+    dep: depDedIT - depDedRT,
+    dis: disDedIT - disDedRT,
+    sp:  spDedIT - spDedRT,
+    sw:  swDedIT - swDedRT,
+  });
+
+  const housingRT = Math.max(0, Math.min(housingLoan - housingUsed, incomeShareRT - adjustmentRT - divCreditRT));
+  const adjustedRT = Math.max(0, incomeShareRT - adjustmentRT - divCreditRT - housingRT);
 
   const flatRT   = r.rtFlat.mun + r.rtFlat.pref;
   const forestRT = r.rtFlat.forest;
@@ -1336,6 +1365,7 @@ function calc() {
   set('rt-taxable', fmt(taxableRT));
   set('rt-mun', fmt(munInc));
   set('rt-pref', fmt(prefInc));
+  set('rt-adjust', adjustmentRT > 0 ? '▲ ' + fmt(adjustmentRT) : '0 円');
   set('rt-div-ded', divCreditRT > 0 ? '▲ ' + fmt(divCreditRT) : '0 円');
   set('rt-housing', housingRT > 0 ? '▲ ' + fmt(housingRT) : '0 円');
   set('rt-income-tax', fmt(adjustedRT));
