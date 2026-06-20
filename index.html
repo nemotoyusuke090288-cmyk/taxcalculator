@@ -636,7 +636,7 @@
     <div class="tax-grid">
       <div class="tax-card income-tax"><div class="label">所得税（分離含む）</div><div class="amount" id="s-it">―</div></div>
       <div class="tax-card resident-tax"><div class="label">住民税（分離含む）</div><div class="amount" id="s-rt">―</div></div>
-      <div class="tax-card stock-tax"><div class="label">うち申告分離課税</div><div class="amount" id="s-st">―</div></div>
+      <div class="tax-card stock-tax"><div class="label">申告分離課税 算出税額（源泉精算前）</div><div class="amount" id="s-st">―</div></div>
       <div class="tax-card total-tax"><div class="label">合計（全税種）</div><div class="amount" id="s-total">―</div></div>
     </div>
     <div class="result-section">
@@ -696,8 +696,10 @@
       <div class="result-row"><span class="lbl">所得税額</span><span class="val" id="it-tax">―</span></div>
       <div class="result-row sub"><span class="lbl">復興特別所得税（×2.1%）</span><span class="val" id="it-rec">―</span></div>
       <div class="result-row"><span class="lbl">所得税合計（復興税込）</span><span class="val" id="it-total">―</span></div>
-      <div class="result-row sub"><span class="lbl">申告分離課税分（所得税・復興税）※分離課税タブ参照</span><span class="val" id="it-separate">―</span></div>
-      <div class="result-row total"><span class="lbl">所得税 総合計（総合＋分離）</span><span class="val" id="it-grand">―</span></div>
+      <div class="result-row sub"><span class="lbl">申告分離課税 算出所得税（復興税込）※分離課税タブ参照</span><span class="val" id="it-separate">―</span></div>
+      <div class="result-row sub"><span class="lbl">源泉徴収税額（申告分離①③・株式譲渡 15.315%）</span><span class="val negative" id="it-withheld">―</span></div>
+      <div class="result-row total"><span class="lbl">所得税 申告納税額（総合＋分離−源泉）</span><span class="val" id="it-grand">―</span></div>
+      <div class="result-row sub" id="it-refund-row" style="display:none"><span class="lbl">うち還付される所得税</span><span class="val" id="it-refund">―</span></div>
     </div>
   </div>
 
@@ -727,16 +729,18 @@
     <div class="result-section">
       <h3>住民税額の計算</h3>
       <div class="result-row"><span class="lbl">課税所得（1,000円未満切捨）</span><span class="val" id="rt-taxable">―</span></div>
-      <div class="result-row sub"><span class="lbl">市民税所得割（×6%）</span><span class="val" id="rt-mun">―</span></div>
-      <div class="result-row sub"><span class="lbl">都民税所得割（×4%）</span><span class="val" id="rt-pref">―</span></div>
+      <div class="result-row sub"><span class="lbl">市民税所得割（総合×6%）</span><span class="val" id="rt-mun">―</span></div>
+      <div class="result-row sub"><span class="lbl">都民税所得割（総合×4%）</span><span class="val" id="rt-pref">―</span></div>
+      <div class="result-row sub"><span class="lbl">申告分離課税分の所得割（×5%）※分離課税タブ参照</span><span class="val" id="rt-sep-income">―</span></div>
       <div class="result-row sub"><span class="lbl">調整控除</span><span class="val negative" id="rt-adjust">―</span></div>
       <div class="result-row sub"><span class="lbl">配当控除</span><span class="val negative" id="rt-div-ded">―</span></div>
       <div class="result-row sub"><span class="lbl">住宅ローン控除</span><span class="val negative" id="rt-housing">―</span></div>
-      <div class="result-row"><span class="lbl">所得割合計</span><span class="val" id="rt-income-tax">―</span></div>
+      <div class="result-row sub"><span class="lbl">配当割額控除・株式等譲渡所得割額控除</span><span class="val negative" id="rt-divwithhold">―</span></div>
+      <div class="result-row"><span class="lbl">差引所得割額</span><span class="val" id="rt-income-tax">―</span></div>
       <div class="result-row sub"><span class="lbl">均等割（市民税3,000＋都民税1,000）</span><span class="val" id="rt-flat">―</span></div>
       <div class="result-row sub"><span class="lbl">森林環境税（国税）</span><span class="val" id="rt-forest">―</span></div>
-      <div class="result-row sub"><span class="lbl">申告分離課税分（株式等の所得割等）※分離課税タブ参照</span><span class="val" id="rt-separate">―</span></div>
       <div class="result-row total"><span class="lbl">住民税合計（令和8年度）</span><span class="val" id="rt-total">―</span></div>
+      <div class="result-row sub" id="rt-refund-row" style="display:none"><span class="lbl">うち還付される住民税（配当割額控除の超過分）</span><span class="val" id="rt-refund">―</span></div>
     </div>
   </div>
 
@@ -767,19 +771,16 @@
         <div class="result-row sub"><span class="lbl">③ 公社債投資信託等</span><span class="val" id="div-sep-bond-rev">―</span></div>
         <div class="result-row total"><span class="lbl">課税標準（損益通算後・1,000円未満切捨）</span><span class="val" id="div-sep-taxable">―</span></div>
         <hr class="sep">
-        <div class="stb-subtitle" style="font-weight:700;margin:4px 0">■ 所得税分（→所得税タブに加算）</div>
+        <div class="stb-subtitle" style="font-weight:700;margin:4px 0">■ 所得税分（→所得税タブで精算）</div>
         <div class="result-row sub"><span class="lbl">所得税（15%）</span><span class="val" id="div-sep-it">―</span></div>
         <div class="result-row sub"><span class="lbl">復興特別所得税（0.315%）</span><span class="val" id="div-sep-rec">―</span></div>
-        <div class="result-row sub"><span class="lbl">源泉徴収分 所得税（申告しない①③）</span><span class="val" id="div-sep-withheld-it">―</span></div>
-        <div class="result-row"><span class="lbl">所得税額 小計</span><span class="val" id="div-sep-it-subtotal">―</span></div>
+        <div class="result-row"><span class="lbl">算出所得税 小計</span><span class="val" id="div-sep-it-subtotal">―</span></div>
+        <div class="result-row sub"><span class="lbl">源泉徴収税額（15.315%・申告分離分）</span><span class="val negative" id="div-sep-withheld-it">―</span></div>
         <hr class="sep">
-        <div class="stb-subtitle" style="font-weight:700;margin:4px 0">■ 住民税分（→住民税タブに加算）</div>
-        <div class="result-row sub"><span class="lbl">住民税（5%）</span><span class="val" id="div-sep-rt">―</span></div>
-        <div class="result-row sub"><span class="lbl">源泉徴収分 住民税（申告しない①③）</span><span class="val" id="div-sep-withheld-rt">―</span></div>
-        <div class="result-row"><span class="lbl">住民税額 小計</span><span class="val" id="div-sep-rt-subtotal">―</span></div>
-        <hr class="sep">
-        <div class="result-row total"><span class="lbl">合計税額（所得税＋住民税）</span><span class="val" id="div-sep-total">―</span></div>
-        <div class="hint" style="margin-top:4px">※ 源泉徴収済みの税額と比較し、有利な方を選択してください。</div>
+        <div class="stb-subtitle" style="font-weight:700;margin:4px 0">■ 住民税分（→住民税タブで精算）</div>
+        <div class="result-row sub"><span class="lbl">所得割（5%＝市3%＋都2%）</span><span class="val" id="div-sep-rt">―</span></div>
+        <div class="result-row sub"><span class="lbl">配当割額控除・株式等譲渡所得割額控除（5%）</span><span class="val negative" id="div-sep-withheld-rt">―</span></div>
+        <div class="hint" style="margin-top:6px">※ 申告分離を選んだ①③配当・株式譲渡益には源泉徴収（所得税15.315%＋住民税5%）が行われています。所得税の源泉徴収税額は確定申告で、住民税の5%は「配当割額控除・株式等譲渡所得割額控除」として、それぞれ各タブの最終税額に反映済みです。損益通算・繰越損失で算出税額が源泉税を下回る場合は差額が還付されます。「申告しない」を選んだ分は源泉徴収で課税が完結するため、ここには含まれません。</div>
       </div>
     </div>
   </div>
@@ -1085,13 +1086,8 @@ function calc() {
   // 申告分離課税分（株式等譲渡損との損益通算対象）
   const divListedSep = divListedMethod === 'separate' ? divListedRev : 0;
   const divBondSep   = divBondMethod   === 'separate' ? divBondRev   : 0;
-  // 源泉徴収済み税額（申告しない＝源泉完了分。①上場・③公社債が対象）
-  const divListedWithheldBase = divListedMethod === 'none' ? divListedRev : 0;
-  const divBondWithheldBase   = divBondMethod   === 'none' ? divBondRev   : 0;
-  const withheldBase  = divListedWithheldBase + divBondWithheldBase;
-  const withheldIT    = Math.floor(withheldBase * 0.15315); // 所得税15% + 復興0.315%
-  const withheldRT    = Math.floor(withheldBase * 0.05);    // 住民税5%
-  const withheldTotal = withheldIT + withheldRT;            // 計20.315%
+  // ※「申告しない」を選んだ①③は源泉徴収（所得税15.315%＋住民税5%）で課税が完結するため、
+  //   申告に含めない（加算も控除もしない）。申告分離を選んだ分のみ下で源泉税額を精算する。
 
   // 社会保険料
   let shaho;
@@ -1203,6 +1199,13 @@ function calc() {
   const taxableSepBase = Math.floor(taxableSep / 1000) * 1000;    // 課税標準（1,000円未満切捨）→ 税額計算に使用
   const stockTaxITRaw  = Math.floor(taxableSepBase * 0.15);
 
+  // ---------- 申告分離分に特別徴収済みの源泉税（申告で精算） ----------
+  // 対象：申告分離した①上場配当・③公社債等（必ず源泉あり）＋ 株式等譲渡益（特定口座源泉ありを前提）
+  // 損益通算・繰越損失の控除前の総額に課税されているため、通算後の税額より源泉税が多ければ還付になる。
+  const sepWithholdBase = divListedSep + divBondSep + Math.max(0, stockRev - stockCost);
+  const sepWithholdIT   = Math.floor(sepWithholdBase * 0.15315); // 源泉所得税（所得税15%＋復興0.315%）
+  const sepWithholdRT   = Math.floor(sepWithholdBase * 0.05);    // 配当割額＋株式等譲渡所得割額（住民税5%）
+
   // ---------- 医療費控除 ----------
   const medPaid    = getN('medical-paid');
   const medCovered = getN('medical-covered');
@@ -1246,14 +1249,20 @@ function calc() {
                    + disDedRT + spDedRT + swDedRT + medDed + donDed + basicRT;
 
   const taxableRT = Math.max(0, Math.floor((totalIncome - totalDedRT) / 1000) * 1000);
+  // 総合課税分の所得割（市民税6%＋都民税4%、100円未満切捨）
   const munInc    = Math.floor(taxableRT * r.rtRates.mun / 100) * 100;
   const prefInc   = Math.floor(taxableRT * r.rtRates.pref / 100) * 100;
-  const incomeShareRT = munInc + prefInc;
+  // 申告分離分の所得割（課税標準×5%＝市民税3%＋都民税2%）
+  const sepMunInc  = Math.floor(taxableSepBase * (r.rtRates.mun / 2) / 100) * 100;
+  const sepPrefInc = Math.floor(taxableSepBase * (r.rtRates.pref / 2) / 100) * 100;
+  const stockTaxRT = sepMunInc + sepPrefInc;
+  // 所得割合計（総合＋分離）
+  const incomeShareRT = munInc + prefInc + stockTaxRT;
 
   const divCreditRT = divRev > 0
     ? dividendCreditRT(divRev, taxableRT) : 0;
 
-  // 調整控除（人的控除額の差に基づく住民税の税額控除。所得税の前に適用）
+  // 調整控除（人的控除額の差に基づく住民税の税額控除）
   const adjustmentRT = calcAdjustmentRT(totalIncome, taxableRT, {
     spouse: (hasSpouse && spTotal <= 500000) ? (spouseDedIT - spouseDedRT) : 0,
     dep: depDedIT - depDedRT,
@@ -1262,27 +1271,36 @@ function calc() {
     sw:  swDedIT - swDedRT,
   });
 
+  // 税額控除の適用順：調整控除→配当控除→住宅ローン控除→（最後に）配当割額控除・株式等譲渡所得割額控除
   const housingRT = Math.max(0, Math.min(housingLoan - housingUsed, incomeShareRT - adjustmentRT - divCreditRT));
-  const adjustedRT = Math.max(0, incomeShareRT - adjustmentRT - divCreditRT - housingRT);
+  const incomeAfterCreditsRT = Math.max(0, incomeShareRT - adjustmentRT - divCreditRT - housingRT);
+  // 配当割額控除・株式等譲渡所得割額控除（申告分離した①③配当・株式譲渡益に特別徴収された住民税5%）
+  const sepCreditToIncomeRT = Math.min(incomeAfterCreditsRT, sepWithholdRT);
+  const adjustedRT          = incomeAfterCreditsRT - sepCreditToIncomeRT;   // 差引所得割額
+  const sepCreditRemainRT   = sepWithholdRT - sepCreditToIncomeRT;
 
-  const flatRT   = r.rtFlat.mun + r.rtFlat.pref;
-  const forestRT = r.rtFlat.forest;
-  const totalRT  = adjustedRT + flatRT + forestRT;
+  const flatRT   = r.rtFlat.mun + r.rtFlat.pref;   // 均等割（表示用・充当前）
+  const forestRT = r.rtFlat.forest;                // 森林環境税（国税。配当割額控除の充当対象外）
+  // 控除しきれない配当割額控除等は均等割に充当し、なお残れば還付
+  const sepCreditToFlatRT = Math.min(flatRT, sepCreditRemainRT);
+  const rtRefund = Math.max(0, sepCreditRemainRT - flatRT);          // 還付額
+  const totalRT  = adjustedRT + (flatRT - sepCreditToFlatRT) + forestRT; // 住民税 年税額（配当割額控除後）
 
-  // ---------- 申告分離課税（最終税額） ----------
-  // stockGainRaw, netSeparate, taxableSepBase, stockTaxITRaw は上で計算済み
+  // ---------- 申告分離課税（所得税・最終税額） ----------
+  // stockGainRaw, netSeparate, taxableSepBase, stockTaxITRaw, stockTaxRT は上で計算済み
   const stockTaxITFinal = stockTaxITRaw - housingFromSepIT;
   const stockTaxRec     = Math.floor(stockTaxITFinal * 0.021);
-  const stockTaxRT      = Math.floor(taxableSepBase * 0.05);       // 課税標準（1,000円未満切捨）×5%
-  const stockTaxTotal   = stockTaxITFinal + stockTaxRec + stockTaxRT + withheldTotal;
+  const sepIT           = stockTaxITFinal + stockTaxRec;           // 分離の算出所得税（復興税込）
 
-  // 分離課税を所得税分・住民税分に分けて集計（各タブへ加算表示）
-  const sepIT   = stockTaxITFinal + stockTaxRec + withheldIT;      // 分離課税の所得税（復興税・源泉所得税込）
-  const sepRT   = stockTaxRT + withheldRT;                         // 分離課税の住民税（源泉住民税込）
-  const itGrand = totalIT + sepIT;                                 // 所得税 総合計（総合＋分離）
-  const rtGrand = totalRT + sepRT;                                 // 住民税 総合計（総合＋分離）
+  // 所得税の源泉徴収税額を精算（総合＋分離の算出所得税から控除。引ききれない分は還付）
+  const itArising        = totalIT + sepIT;                        // 算出所得税合計（復興税込）
+  const itWithholdCredit = Math.min(itArising, sepWithholdIT);
+  const itGrand          = itArising - itWithholdCredit;           // 所得税 申告納税額
+  const itRefund         = sepWithholdIT - itWithholdCredit;       // 還付される所得税
 
-  const grandTotal = itGrand + rtGrand;
+  const stockTaxTotal = sepIT + stockTaxRT;                        // 分離課税の算出税額合計（源泉精算前・まとめタブ用）
+  const rtGrand       = totalRT;                                   // 住民税 年税額（配当割額控除後）
+  const grandTotal    = itGrand + rtGrand;
 
   // ===================================================================
   // UI更新
@@ -1292,7 +1310,7 @@ function calc() {
   const baseSalary = salary || 1; // 実効税率計算用
   set('total-tax-display', fmt(grandTotal));
   set('total-tax-sub', `所得税 ${itGrand.toLocaleString()} 円 ＋ 住民税 ${rtGrand.toLocaleString()} 円` +
-    (stockTaxTotal > 0 ? `（うち申告分離課税 ${stockTaxTotal.toLocaleString()} 円）` : ''));
+    (stockTaxTotal > 0 ? `（申告分離課税の算出税額 ${stockTaxTotal.toLocaleString()} 円・源泉精算前）` : ''));
   set('s-it', fmt(itGrand));
   set('s-rt', fmt(rtGrand));
   set('s-st', stockTaxTotal > 0 ? fmt(stockTaxTotal) : '―');
@@ -1364,7 +1382,10 @@ function calc() {
   set('it-rec', fmt(recTax));
   set('it-total', fmt(totalIT));
   set('it-separate', sepIT > 0 ? fmt(sepIT) : '0 円');
+  set('it-withheld', itWithholdCredit > 0 ? '▲ ' + fmt(itWithholdCredit) : '0 円');
   set('it-grand', fmt(itGrand));
+  el('it-refund-row').style.display = itRefund > 0 ? '' : 'none';
+  set('it-refund', fmt(itRefund));
 
   // --- 住民税タブ ---
   set('rt-total-income', fmt(totalIncome));
@@ -1384,20 +1405,22 @@ function calc() {
   set('rt-taxable', fmt(taxableRT));
   set('rt-mun', fmt(munInc));
   set('rt-pref', fmt(prefInc));
+  set('rt-sep-income', stockTaxRT > 0 ? fmt(stockTaxRT) : '0 円');
   set('rt-adjust', adjustmentRT > 0 ? '▲ ' + fmt(adjustmentRT) : '0 円');
   set('rt-div-ded', divCreditRT > 0 ? '▲ ' + fmt(divCreditRT) : '0 円');
   set('rt-housing', housingRT > 0 ? '▲ ' + fmt(housingRT) : '0 円');
+  set('rt-divwithhold', sepWithholdRT > 0 ? '▲ ' + fmt(sepWithholdRT) : '0 円');
   set('rt-income-tax', fmt(adjustedRT));
   set('rt-flat', fmt(flatRT));
   set('rt-forest', fmt(forestRT));
-  set('rt-separate', sepRT > 0 ? fmt(sepRT) : '0 円');
   set('rt-total', fmt(rtGrand));
+  el('rt-refund-row').style.display = rtRefund > 0 ? '' : 'none';
+  set('rt-refund', fmt(rtRefund));
 
   // --- 分離課税タブ ---
   const hasStock    = activeIncomes.stock && (stockRev > 0 || stockLoss > 0);
   const hasDivSep      = activeIncomes.dividend && (divListedSep > 0 || divBondSep > 0);
-  const hasDivWithheld = activeIncomes.dividend && withheldTotal > 0;
-  const hasSeparate    = hasStock || hasDivSep || hasDivWithheld;
+  const hasSeparate    = hasStock || hasDivSep;
   el('no-separate-msg').style.display      = hasSeparate ? 'none' : '';
   el('stock-result').style.display          = 'none'; // 統合ボックスに置換
   el('dividend-separate-result').style.display = hasSeparate ? '' : 'none';
@@ -1412,12 +1435,10 @@ function calc() {
     set('div-sep-taxable', fmt(taxableSepBase));
     set('div-sep-it',      fmt(stockTaxITFinal));
     set('div-sep-rec',     fmt(stockTaxRec));
-    set('div-sep-withheld-it', withheldIT > 0 ? fmt(withheldIT) : '0 円');
     set('div-sep-it-subtotal', fmt(sepIT));
+    set('div-sep-withheld-it', sepWithholdIT > 0 ? '▲ ' + fmt(sepWithholdIT) : '0 円');
     set('div-sep-rt',      fmt(stockTaxRT));
-    set('div-sep-withheld-rt', withheldRT > 0 ? fmt(withheldRT) : '0 円');
-    set('div-sep-rt-subtotal', fmt(sepRT));
-    set('div-sep-total',   fmt(stockTaxTotal));
+    set('div-sep-withheld-rt', sepWithholdRT > 0 ? '▲ ' + fmt(sepWithholdRT) : '0 円');
   }
 }
 
@@ -1489,9 +1510,12 @@ function updateYearMeta(year) {
 }
 
 function updateDividendFields() {
+  const listedMethod   = el('div-listed-method')?.value   ?? 'none';
   const unlistedMethod = el('div-unlisted-method')?.value ?? 'none';
-  el('div-listed-fields').style.display   = '';                                   // 常時表示（申告しない時も源泉額入力可）
-  el('div-bond-fields').style.display     = '';                                   // 常時表示
+  const bondMethod     = el('div-bond-method')?.value     ?? 'none';
+  // 「申告しない」は源泉徴収で課税が完結し申告に含めないため、収入欄を非表示
+  el('div-listed-fields').style.display   = listedMethod   !== 'none' ? '' : 'none';
+  el('div-bond-fields').style.display     = bondMethod     !== 'none' ? '' : 'none';
   el('div-unlisted-fields').style.display = unlistedMethod !== 'none' ? '' : 'none';
 }
 
