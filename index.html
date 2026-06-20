@@ -1053,7 +1053,7 @@ function calcSpouseDed(myIncome, spouseTotalIncome, isElderly, bracketTable, spe
 // 住民税の調整控除（人的控除額の差の合計に基づく税額控除。地方税法第37条/314条の6）
 // diffs: 各人的控除の「所得税控除額 − 住民税控除額」（配偶者・扶養・障害者・ひとり親等）
 function calcAdjustmentRT(totalIncome, taxableRT, diffs) {
-  if (totalIncome > 25000000) return 0; // 合計所得2,500万円超は調整控除の対象外
+  if (totalIncome > 25000000) return { mun: 0, pref: 0 }; // 合計所得2,500万円超は調整控除の対象外
   // 基礎控除の人的控除差は法定差額（令和7〜8年の時限的引上げは反映せず）
   let basicDiff = 50000;
   if (totalIncome > 24500000)      basicDiff = 10000;
@@ -1062,11 +1062,12 @@ function calcAdjustmentRT(totalIncome, taxableRT, diffs) {
                  + Math.max(0, diffs.spouse) + Math.max(0, diffs.dep)
                  + Math.max(0, diffs.dis)    + Math.max(0, diffs.sp)
                  + Math.max(0, diffs.sw);
-  if (persDiff <= 0) return 0;
+  if (persDiff <= 0) return { mun: 0, pref: 0 };
   let base;
   if (taxableRT <= 2000000) base = Math.min(persDiff, taxableRT);
   else                      base = Math.max(persDiff - (taxableRT - 2000000), 50000);
-  return Math.floor(base * 0.05); // 市民税3% + 都民税2%
+  // 市民税3% + 都民税2%（市/都別に算定）
+  return { mun: Math.floor(base * 0.03), pref: Math.floor(base * 0.02) };
 }
 
 // 配当控除
@@ -1094,6 +1095,14 @@ function dividendCreditIT(full, trust, taxableIncome) {
 function dividendCreditRT(full, trust, taxableIncome) {
   // 利益の配当 2.8%(市1.6+都1.2)/1.4%、証券投資信託 1.4%/0.7%
   return dividendCreditRates(full, trust, taxableIncome, 0.028, 0.014, 0.014, 0.007);
+}
+function dividendCreditRTmun(full, trust, taxableIncome) {
+  // 市民税分：利益の配当 1.6%/0.8%、証券投資信託 0.8%/0.4%
+  return dividendCreditRates(full, trust, taxableIncome, 0.016, 0.008, 0.008, 0.004);
+}
+function dividendCreditRTpref(full, trust, taxableIncome) {
+  // 都民税分：利益の配当 1.2%/0.6%、証券投資信託 0.6%/0.3%
+  return dividendCreditRates(full, trust, taxableIncome, 0.012, 0.006, 0.006, 0.003);
 }
 
 // ===================================================================
@@ -1315,35 +1324,58 @@ function calc() {
                    + disDedRT + spDedRT + swDedRT + medDed + donDed + basicRT;
 
   const taxableRT = Math.max(0, Math.floor((totalIncome - totalDedRT) / 1000) * 1000);
-  // 総合課税分の所得割（市民税6%＋都民税4%、100円未満切捨）
-  const munInc    = Math.floor(taxableRT * r.rtRates.mun / 100) * 100;
-  const prefInc   = Math.floor(taxableRT * r.rtRates.pref / 100) * 100;
-  // 申告分離分の所得割（課税標準×5%＝市民税3%＋都民税2%）
-  const sepMunInc  = Math.floor(taxableSepBase * (r.rtRates.mun / 2) / 100) * 100;
-  const sepPrefInc = Math.floor(taxableSepBase * (r.rtRates.pref / 2) / 100) * 100;
-  const stockTaxRT = sepMunInc + sepPrefInc;
-  // 所得割合計（総合＋分離）
-  const incomeShareRT = munInc + prefInc + stockTaxRT;
 
-  const divCreditRT = divRev > 0
-    ? dividendCreditRT(divFull, divTrust, taxableRT) : 0;
+  // 所得割は市民税分・都民税分を別々に保持し、税額控除を引いた最後に各々100円未満切捨する
+  // （住民税課税明細書の方式。税額控除前所得割額は円単位で保持）。
+  // 総合課税：市6%/都4%、申告分離：市3%/都2%。
+  const munGeneral  = taxableRT * r.rtRates.mun;          // 総合課税・市民税分（税額控除前・円）
+  const prefGeneral = taxableRT * r.rtRates.pref;         // 総合課税・都民税分
+  const munSep      = taxableSepBase * (r.rtRates.mun / 2);  // 申告分離・市民税分（3%）
+  const prefSep     = taxableSepBase * (r.rtRates.pref / 2); // 申告分離・都民税分（2%）
+  const munInc      = munGeneral;                        // 表示用：総合課税の市民税所得割
+  const prefInc     = prefGeneral;                       // 表示用：総合課税の都民税所得割
+  const stockTaxRT  = munSep + prefSep;                  // 表示用：申告分離分の所得割（市3%＋都2%）
+  const munIncRaw   = munGeneral + munSep;               // 市民税所得割（税額控除前・総合＋分離）
+  const prefIncRaw  = prefGeneral + prefSep;             // 都民税所得割（税額控除前・総合＋分離）
 
-  // 調整控除（人的控除額の差に基づく住民税の税額控除）
-  const adjustmentRT = calcAdjustmentRT(totalIncome, taxableRT, {
+  // 配当控除（市1.6%/都1.2%、証券投資信託は半分）
+  const munDivCredit  = divRev > 0 ? dividendCreditRTmun(divFull, divTrust, taxableRT)  : 0;
+  const prefDivCredit = divRev > 0 ? dividendCreditRTpref(divFull, divTrust, taxableRT) : 0;
+  const divCreditRT   = munDivCredit + prefDivCredit;    // 表示用合計
+
+  // 調整控除（人的控除額の差に基づく住民税の税額控除。市3%/都2%）
+  const adj = calcAdjustmentRT(totalIncome, taxableRT, {
     spouse: (hasSpouse && spTotal <= 500000) ? (spouseDedIT - spouseDedRT) : 0,
     dep: depDedIT - depDedRT,
     dis: disDedIT - disDedRT,
     sp:  spDedIT - spDedRT,
     sw:  swDedIT - swDedRT,
   });
+  const adjustmentRT = adj.mun + adj.pref;               // 表示用合計
 
-  // 税額控除の適用順：調整控除→配当控除→住宅ローン控除→（最後に）配当割額控除・株式等譲渡所得割額控除
-  const housingRT = Math.max(0, Math.min(housingLoan - housingUsed, incomeShareRT - adjustmentRT - divCreditRT));
-  const incomeAfterCreditsRT = Math.max(0, incomeShareRT - adjustmentRT - divCreditRT - housingRT);
-  // 配当割額控除・株式等譲渡所得割額控除（申告分離した①③配当・株式譲渡益に特別徴収された住民税5%）
-  const sepCreditToIncomeRT = Math.min(incomeAfterCreditsRT, sepWithholdRT);
-  const adjustedRT          = incomeAfterCreditsRT - sepCreditToIncomeRT;   // 差引所得割額
-  const sepCreditRemainRT   = sepWithholdRT - sepCreditToIncomeRT;
+  // 住宅ローン控除（住民税分。調整控除・配当控除後の所得割を上限に、市/都へ3:2按分）
+  const munAfterAD  = Math.max(0, munIncRaw  - adj.mun  - munDivCredit);
+  const prefAfterAD = Math.max(0, prefIncRaw - adj.pref - prefDivCredit);
+  const housingRT   = Math.max(0, Math.min(housingLoan - housingUsed, munAfterAD + prefAfterAD));
+  const munHousing  = Math.floor(housingRT * 3 / 5);
+  const prefHousing = housingRT - munHousing;
+
+  // 配当割額控除・株式等譲渡所得割額控除（特別徴収された住民税5%。市3/5・都2/5へ按分）
+  const munSepCredit  = Math.floor(sepWithholdRT * 3 / 5);
+  const prefSepCredit = sepWithholdRT - munSepCredit;
+
+  // 税額控除前所得割から「調整→配当→住宅ローン→配当割」を控除し、配当割控除後に100円未満切捨（市/都別）
+  const settleShare = (incRaw, adjV, divV, housV, sepV) => {
+    const beforeSep  = Math.max(0, incRaw - adjV - divV - housV); // 配当割控除前所得割（円）
+    const sepApplied = Math.min(beforeSep, sepV);                 // 所得割へ充当した配当割
+    const share      = Math.floor((beforeSep - sepApplied) / 100) * 100; // 差引所得割額（100円未満切捨）
+    const sepRemain  = sepV - sepApplied;                         // 引ききれない配当割（均等割充当・還付へ）
+    return { share, sepRemain };
+  };
+  const munS  = settleShare(munIncRaw,  adj.mun,  munDivCredit,  munHousing,  munSepCredit);
+  const prefS = settleShare(prefIncRaw, adj.pref, prefDivCredit, prefHousing, prefSepCredit);
+  const adjustedRT        = munS.share + prefS.share;            // 差引所得割額（市＋都）
+  const sepCreditRemainRT = munS.sepRemain + prefS.sepRemain;   // 引ききれない配当割額控除（均等割充当・還付対象）
 
   const flatRT   = r.rtFlat.mun + r.rtFlat.pref;   // 均等割（表示用・充当前）
   const forestRT = r.rtFlat.forest;                // 森林環境税（国税。配当割額控除の充当対象外）
