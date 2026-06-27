@@ -774,8 +774,7 @@
     <div class="result-section">
       <h3>住民税額の計算</h3>
       <div class="result-row"><span class="lbl">課税所得（1,000円未満切捨）</span><span class="val" id="rt-taxable">―</span></div>
-      <div class="result-row sub"><span class="lbl">市民税所得割（総合×6%）</span><span class="val" id="rt-mun">―</span></div>
-      <div class="result-row sub"><span class="lbl">都民税所得割（総合×4%）</span><span class="val" id="rt-pref">―</span></div>
+      <div class="result-row sub"><span class="lbl">所得割（総合・市6%／都4%）</span><span class="val" id="rt-mun-pref">―</span></div>
       <div class="result-row sub"><span class="lbl">申告分離課税分の所得割（市3%／都2%）</span><span class="val" id="rt-sep-income">―</span></div>
       <div class="result-row sub"><span class="lbl">調整控除（市3%／都2%）</span><span class="val negative" id="rt-adjust">―</span></div>
       <div class="result-row sub"><span class="lbl">配当控除（市1.6%／都1.2%）</span><span class="val negative" id="rt-div-ded">―</span></div>
@@ -1540,8 +1539,7 @@ function calc() {
   set('rt-ded-total', fmt(totalDedRT));
   set('rt-taxable', fmt(taxableRT));
   const munPref = (m, p) => `市 ${m.toLocaleString()} ／ 都 ${p.toLocaleString()} 円`;
-  set('rt-mun', fmt(munInc));
-  set('rt-pref', fmt(prefInc));
+  set('rt-mun-pref', munPref(munInc, prefInc));
   set('rt-sep-income', stockTaxRT > 0 ? munPref(munSep, prefSep) : '0 円');
   set('rt-adjust', adjustmentRT > 0 ? '▲ ' + munPref(adj.mun, adj.pref) : '0 円');
   set('rt-div-ded', divCreditRT > 0 ? '▲ ' + munPref(munDivCredit, prefDivCredit) : '0 円');
