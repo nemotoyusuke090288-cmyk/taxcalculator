@@ -779,8 +779,8 @@
       <div class="result-row sub"><span class="lbl">申告分離課税分の所得割（市3%／都2%）</span><span class="val" id="rt-sep-income">―</span></div>
       <div class="result-row sub"><span class="lbl">調整控除（市3%／都2%）</span><span class="val negative" id="rt-adjust">―</span></div>
       <div class="result-row sub"><span class="lbl">配当控除（市1.6%／都1.2%）</span><span class="val negative" id="rt-div-ded">―</span></div>
-      <div class="result-row sub"><span class="lbl">住宅ローン控除</span><span class="val negative" id="rt-housing">―</span></div>
-      <div class="result-row sub"><span class="lbl">配当割額控除・株式等譲渡所得割額控除</span><span class="val negative" id="rt-divwithhold">―</span></div>
+      <div class="result-row sub"><span class="lbl">住宅ローン控除（市3/5／都2/5）</span><span class="val negative" id="rt-housing">―</span></div>
+      <div class="result-row sub"><span class="lbl">配当割額控除・株式等譲渡所得割額控除（市3/5／都2/5）</span><span class="val negative" id="rt-divwithhold">―</span></div>
       <div class="result-row"><span class="lbl">差引所得割額</span><span class="val" id="rt-income-tax">―</span></div>
       <div class="result-row sub"><span class="lbl">均等割（市民税3,000／都民税1,000）</span><span class="val" id="rt-flat">―</span></div>
       <div class="result-row sub"><span class="lbl">森林環境税（国税）</span><span class="val" id="rt-forest">―</span></div>
@@ -819,7 +819,10 @@
         <div class="result-row total"><span class="lbl">課税標準（損益通算後・1,000円未満切捨）</span><span class="val" id="div-sep-taxable">―</span></div>
         <hr class="sep">
         <div class="stb-subtitle" style="font-weight:700;margin:4px 0">■ 所得税分（→所得税タブで精算）</div>
-        <div class="result-row sub"><span class="lbl">所得税（15%・配当控除/住宅ローン控除後）</span><span class="val" id="div-sep-it">―</span></div>
+        <div class="result-row sub"><span class="lbl">算出所得税（課税標準×15%）</span><span class="val" id="div-sep-it-raw">―</span></div>
+        <div class="result-row sub" id="div-sep-divcredit-row" style="display:none"><span class="lbl">配当控除（総合の算出税額からのあふれ分）</span><span class="val negative" id="div-sep-divcredit">―</span></div>
+        <div class="result-row sub" id="div-sep-housing-row" style="display:none"><span class="lbl">住宅ローン控除（総合からのあふれ分）</span><span class="val negative" id="div-sep-housing">―</span></div>
+        <div class="result-row sub"><span class="lbl">所得税（控除後）</span><span class="val" id="div-sep-it">―</span></div>
         <div class="result-row sub"><span class="lbl">復興特別所得税（2.1%）</span><span class="val" id="div-sep-rec">―</span></div>
         <div class="result-row"><span class="lbl">算出所得税 小計</span><span class="val" id="div-sep-it-subtotal">―</span></div>
         <div class="result-row sub"><span class="lbl">源泉徴収税額（15.315%・上場配当/株式譲渡等）</span><span class="val negative" id="div-sep-withheld-it">―</span></div>
@@ -1543,7 +1546,7 @@ function calc() {
   set('rt-adjust', adjustmentRT > 0 ? '▲ ' + munPref(adj.mun, adj.pref) : '0 円');
   set('rt-div-ded', divCreditRT > 0 ? '▲ ' + munPref(munDivCredit, prefDivCredit) : '0 円');
   set('rt-housing', housingRT > 0 ? '▲ ' + munPref(munHousing, prefHousing) : '0 円');
-  set('rt-divwithhold', sepWithholdRT > 0 ? '▲ ' + fmt(sepWithholdRT) : '0 円');
+  set('rt-divwithhold', sepWithholdRT > 0 ? '▲ ' + munPref(munSepCredit, prefSepCredit) : '0 円');
   set('rt-income-tax', fmt(adjustedRT));
   set('rt-flat', munPref(munFlat, prefFlat));
   set('rt-forest', fmt(forestRT));
@@ -1569,6 +1572,11 @@ function calc() {
     set('div-sep-rev',      divListedSep > 0 ? fmt(divListedSep) : '0 円');
     set('div-sep-bond-rev', divBondSep   > 0 ? fmt(divBondSep)   : '0 円');
     set('div-sep-taxable', fmt(taxableSepBase));
+    set('div-sep-it-raw',  fmt(stockTaxITRaw));
+    el('div-sep-divcredit-row').style.display = divCreditToSep > 0 ? '' : 'none';
+    set('div-sep-divcredit', '▲ ' + fmt(divCreditToSep));
+    el('div-sep-housing-row').style.display = housingFromSepIT > 0 ? '' : 'none';
+    set('div-sep-housing', '▲ ' + fmt(housingFromSepIT));
     set('div-sep-it',      fmt(stockTaxITFinal));
     set('div-sep-rec',     fmt(stockTaxRec));
     set('div-sep-it-subtotal', fmt(sepIT));
