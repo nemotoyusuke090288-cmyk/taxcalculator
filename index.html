@@ -1439,8 +1439,9 @@ function calc() {
   // 申告した源泉徴収税額（給与＋申告した①③＋株式等。所得税の源泉＋住民税の配当割額等）。精算済みのため合計には算入しない情報値。
   const declaredWithholdTotal = totalWithholdIT + sepWithholdRT;
   // 「申告しない」①③の源泉徴収税額（源泉分離課税）は別建てカードで表示。
-  //   年間税負担合計（hero）＝所得税(純額)＋住民税＋申告しない源泉。hero = s-it + s-rt + s-withheld で整合。
-  const grandTotal    = itNet + rtGrand + withheldTotal;
+  //   年間税負担合計（hero）＝所得税(純額)＋住民税＋申告した源泉＋申告しない源泉。
+  //   hero = s-it + s-rt + s-decl-withheld + s-withheld で整合（実際に負担した税の総額）。
+  const grandTotal    = itNet + rtGrand + declaredWithholdTotal + withheldTotal;
 
   // ===================================================================
   // UI更新
@@ -1450,6 +1451,7 @@ function calc() {
   const baseSalary = salary || 1; // 実効税率計算用
   set('total-tax-display', fmt(grandTotal));
   set('total-tax-sub', `所得税 ${itNet.toLocaleString()} 円 ＋ 住民税 ${rtGrand.toLocaleString()} 円` +
+    (declaredWithholdTotal > 0 ? ` ＋ 申告した源泉徴収税額 ${declaredWithholdTotal.toLocaleString()} 円` : '') +
     (withheldTotal > 0 ? ` ＋ 申告しない源泉徴収税額 ${withheldTotal.toLocaleString()} 円` : '') +
     (itRefund > 0 ? `（所得税は ${itRefund.toLocaleString()} 円 還付）` : ''));
   set('s-it', fmt(itNet));
