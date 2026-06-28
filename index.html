@@ -672,7 +672,7 @@
     <div class="tax-grid">
       <div class="tax-card income-tax"><div class="label">所得税（分離含む）</div><div class="amount" id="s-it">―</div></div>
       <div class="tax-card resident-tax"><div class="label">住民税（分離含む）</div><div class="amount" id="s-rt">―</div></div>
-      <div class="tax-card stock-tax"><div class="label">申告分離課税 算出税額（源泉精算前）</div><div class="amount" id="s-st">―</div></div>
+      <div class="tax-card stock-tax"><div class="label">申告した源泉徴収税額（給与・①③・株式等）</div><div class="amount" id="s-decl-withheld">―</div></div>
       <div class="tax-card total-tax"><div class="label">申告しない源泉徴収税額（源泉分離・①③）</div><div class="amount" id="s-withheld">―</div></div>
     </div>
     <div class="result-section">
@@ -1434,9 +1434,13 @@ function calc() {
 
   const stockTaxTotal = sepIT + stockTaxRT;                        // 分離課税の算出税額合計（源泉精算前・まとめタブ用）
   const rtGrand       = totalRT;                                   // 住民税 年税額（配当割額控除後）
-  // 「申告しない」①③の源泉徴収税額（源泉分離課税）は申告納税額（所得税/住民税）とは別建て。
-  //   年間税負担合計（hero）には含めるが、所得税カード・住民税カードには混ぜない。
-  const grandTotal    = itGrand + rtGrand + withheldTotal;
+  // 所得税の純額（申告納税額。源泉徴収税額が算出税額を上回る＝還付のときはマイナス）
+  const itNet = itGrand - itRefund;                               // = itArising - totalWithholdIT
+  // 申告した源泉徴収税額（給与＋申告した①③＋株式等。所得税の源泉＋住民税の配当割額等）。精算済みのため合計には算入しない情報値。
+  const declaredWithholdTotal = totalWithholdIT + sepWithholdRT;
+  // 「申告しない」①③の源泉徴収税額（源泉分離課税）は別建てカードで表示。
+  //   年間税負担合計（hero）＝所得税(純額)＋住民税＋申告しない源泉。hero = s-it + s-rt + s-withheld で整合。
+  const grandTotal    = itNet + rtGrand + withheldTotal;
 
   // ===================================================================
   // UI更新
@@ -1445,12 +1449,12 @@ function calc() {
   // --- まとめタブ ---
   const baseSalary = salary || 1; // 実効税率計算用
   set('total-tax-display', fmt(grandTotal));
-  set('total-tax-sub', `所得税 ${itGrand.toLocaleString()} 円 ＋ 住民税 ${rtGrand.toLocaleString()} 円` +
+  set('total-tax-sub', `所得税 ${itNet.toLocaleString()} 円 ＋ 住民税 ${rtGrand.toLocaleString()} 円` +
     (withheldTotal > 0 ? ` ＋ 申告しない源泉徴収税額 ${withheldTotal.toLocaleString()} 円` : '') +
-    (stockTaxTotal > 0 ? `（申告分離課税の算出税額 ${stockTaxTotal.toLocaleString()} 円・源泉精算前）` : ''));
-  set('s-it', fmt(itGrand));
+    (itRefund > 0 ? `（所得税は ${itRefund.toLocaleString()} 円 還付）` : ''));
+  set('s-it', fmt(itNet));
   set('s-rt', fmt(rtGrand));
-  set('s-st', stockTaxTotal > 0 ? fmt(stockTaxTotal) : '―');
+  set('s-decl-withheld', declaredWithholdTotal > 0 ? fmt(declaredWithholdTotal) : '―');
   set('s-withheld', withheldTotal > 0 ? fmt(withheldTotal) : '―');
 
   // 所得内訳行
