@@ -361,6 +361,14 @@
           <div><label>うち証券投資信託の収益分配金</label><div class="sub-label">上記のうち公募株式投資信託の分配金。総合課税では配当控除が<strong>1/2</strong>になります（特定証券投資信託）</div></div>
           <div class="input-with-unit"><input type="number" id="div-listed-trust" value="0" min="0" step="10000"><span class="unit">円</span></div>
         </div>
+        <div class="field-row">
+          <div><label>源泉徴収税額（所得税15.315%）</label><div class="sub-label">特定口座年間取引報告書の<strong>実額</strong>。未入力（0）なら収入×15.315%で概算。国外株式配当等で概算とズレる場合に入力</div></div>
+          <div class="input-with-unit"><input type="number" id="div-listed-withhold-it" value="0" min="0" step="1"><span class="unit">円</span></div>
+        </div>
+        <div class="field-row">
+          <div><label>配当割（住民税5%）</label><div class="sub-label">同報告書の<strong>実額</strong>。未入力なら収入×5%で概算。申告分は配当割額控除の対象</div></div>
+          <div class="input-with-unit"><input type="number" id="div-listed-withhold-rt" value="0" min="0" step="1"><span class="unit">円</span></div>
+        </div>
       </div>
 
       <div class="divider-label" style="margin-top:14px">② 非上場株式等の配当等</div>
@@ -396,6 +404,14 @@
         <div class="field-row">
           <div><label>公社債投資信託等の収益</label></div>
           <div class="input-with-unit"><input type="number" id="div-bond-rev" value="0" min="0" step="10000"><span class="unit">円</span></div>
+        </div>
+        <div class="field-row">
+          <div><label>源泉徴収税額（所得税15.315%）</label><div class="sub-label">特定口座年間取引報告書の<strong>実額</strong>。未入力（0）なら収入×15.315%で概算</div></div>
+          <div class="input-with-unit"><input type="number" id="div-bond-withhold-it" value="0" min="0" step="1"><span class="unit">円</span></div>
+        </div>
+        <div class="field-row">
+          <div><label>配当割（住民税5%）</label><div class="sub-label">同報告書の<strong>実額</strong>。未入力なら収入×5%で概算。申告分は配当割額控除の対象</div></div>
+          <div class="input-with-unit"><input type="number" id="div-bond-withhold-rt" value="0" min="0" step="1"><span class="unit">円</span></div>
         </div>
       </div>
     </div>
@@ -438,31 +454,6 @@
         <div class="input-with-unit"><input type="number" id="stock-withhold-rt" value="0" min="0" step="1"><span class="unit">円</span></div>
       </div>
       <div class="hint">所得税15%＋復興税0.315%＋住民税5%＝20.315%の税率で別途計算します（総所得に含みません）。源泉徴収された税額は申告で精算され、税額が源泉税より少なければ還付されます。</div>
-    </div>
-  </div>
-</div>
-
-<!-- ===== 源泉徴収税額の精算（任意・実額入力） ===== -->
-<div class="section">
-  <div class="section-header" onclick="toggleSection(this)">
-    <div class="section-icon" style="background:#fef9c3">🧾</div>
-    <h2>源泉徴収税額の精算（任意・実額入力）</h2><span class="toggle">▼</span>
-  </div>
-  <div class="section-body hidden-body">
-    <div class="hint" style="margin-bottom:8px">①上場株式等の配当・③公社債等の源泉徴収税額（所得税）・配当割（住民税5%）を、特定口座年間取引報告書の<strong>実額</strong>で精算します。チェックを入れると、概算（収入×15.315%・5%）に代えてこの金額を使用します。国外株式配当（外国税控除後に課税）など概算とズレる場合に使ってください。<br>※<strong>株式等の譲渡</strong>の源泉徴収税額は、株式の入力欄（源泉徴収税額・株式等譲渡所得割額）で指定します。</div>
-    <div class="checkbox-row">
-      <input type="checkbox" id="use-actual-withhold" onchange="toggleActualWithhold()">
-      <label for="use-actual-withhold">①③配当の源泉徴収税額・配当割を実額で入力する</label>
-    </div>
-    <div id="actual-withhold-fields" style="display:none">
-      <div class="field-row">
-        <div><label>源泉徴収税額（所得税）の実額</label><div class="sub-label">申告する①③上場配当・公社債等の源泉所得税の合計（株式譲渡分は含めない）</div></div>
-        <div class="input-with-unit"><input type="number" id="actual-withhold-it" value="0" min="0" step="1"><span class="unit">円</span></div>
-      </div>
-      <div class="field-row">
-        <div><label>配当割（住民税）の実額</label><div class="sub-label">同上に対する住民税5%（配当割額控除の対象額。株式譲渡分は含めない）</div></div>
-        <div class="input-with-unit"><input type="number" id="actual-withhold-rt" value="0" min="0" step="1"><span class="unit">円</span></div>
-      </div>
     </div>
   </div>
 </div>
@@ -682,7 +673,7 @@
       <div class="tax-card income-tax"><div class="label">所得税（分離含む）</div><div class="amount" id="s-it">―</div></div>
       <div class="tax-card resident-tax"><div class="label">住民税（分離含む）</div><div class="amount" id="s-rt">―</div></div>
       <div class="tax-card stock-tax"><div class="label">申告分離課税 算出税額（源泉精算前）</div><div class="amount" id="s-st">―</div></div>
-      <div class="tax-card total-tax"><div class="label">合計（全税種）</div><div class="amount" id="s-total">―</div></div>
+      <div class="tax-card total-tax"><div class="label">申告しない源泉徴収税額（源泉分離・①③）</div><div class="amount" id="s-withheld">―</div></div>
     </div>
     <div class="result-section">
       <h3>所得の内訳</h3>
@@ -829,9 +820,6 @@
         <div class="stb-subtitle" style="font-weight:700;margin:4px 0">■ 住民税分（→住民税タブで精算）</div>
         <div class="result-row sub"><span class="lbl">所得割（5%＝市3%＋都2%）</span><span class="val" id="div-sep-rt">―</span></div>
         <div class="result-row sub"><span class="lbl">配当割額控除・株式等譲渡所得割額控除（5%）</span><span class="val negative" id="div-sep-withheld-rt">―</span></div>
-        <hr class="sep">
-        <div class="stb-subtitle" style="font-weight:700;margin:4px 0">■ 源泉徴収済み（申告しない①③分・源泉分離課税）</div>
-        <div class="result-row total"><span class="lbl">源泉徴収済み税額（所得税15.315%＋住民税5%＝20.315%）</span><span class="val" id="div-sep-withheld">―</span></div>
         <div class="hint" style="margin-top:6px">※ ①上場株式等の配当（総合課税・申告分離いずれも）・③公社債等（申告分離）・株式等譲渡益には源泉徴収（所得税15.315%＋住民税5%）が行われています。所得税の源泉徴収税額は確定申告で、住民税の5%は「配当割額控除・株式等譲渡所得割額控除」として、それぞれ各タブの最終税額に反映済みです。損益通算・繰越損失や配当控除で算出税額が源泉税を下回る場合は差額が還付されます。「申告しない」を選んだ分は源泉徴収で課税が完結するため、ここには含まれません。</div>
       </div>
     </div>
@@ -1166,14 +1154,8 @@ function calc() {
   const divListedSep = divListedMethod === 'separate' ? divListedRev : 0;
   const divBondSep   = divBondMethod   === 'separate' ? divBondRev   : 0;
   // ※「申告しない」を選んだ①③は源泉徴収（所得税15.315%＋住民税5%）で課税が完結する。
-  //   申告には含めない（損益通算・配当控除の対象外）が、その年に納付済みの税額として
-  //   源泉徴収済み税額を算出し、分離課税タブの専用行・合計に表示する。
-  const divListedWithheldBase = divListedMethod === 'none' ? divListedRev : 0;
-  const divBondWithheldBase   = divBondMethod   === 'none' ? divBondRev   : 0;
-  const withheldBase  = divListedWithheldBase + divBondWithheldBase;
-  const withheldIT    = Math.floor(withheldBase * 0.15315); // 所得税15% + 復興0.315%
-  const withheldRT    = Math.floor(withheldBase * 0.05);    // 住民税5%
-  const withheldTotal = withheldIT + withheldRT;            // 計20.315%
+  //   申告には含めない（損益通算・配当控除の対象外）。源泉徴収税額（withheldIT/RT）は
+  //   下の源泉徴収ブロックで①③の実額入力 or 概算から算出し、まとめタブに別建て表示する。
 
   // 社会保険料
   let shaho;
@@ -1294,27 +1276,34 @@ function calc() {
                        + Math.floor(sepDivBNet / 1000) * 1000;   // 課税標準 → 税額計算に使用
   const stockTaxITRaw  = Math.floor(taxableSepBase * 0.15);
 
-  // ---------- 特別徴収済みの源泉税（申告で精算） ----------
-  // 対象：申告した①上場配当（総合・申告分離いずれも源泉あり）＋ ③公社債等（申告分離）＋ 株式等譲渡益（特定口座源泉ありを前提）。
-  //   ※①上場株式等の配当は、総合課税で申告しても源泉徴収（所得税15.315%＋住民税配当割5%）が行われており、
-  //     所得税は源泉徴収税額として、住民税は「配当割額控除」として精算される（確定申告書でも総合分の上場配当を配当割額控除の対象に含む）。
-  //   ※「申告しない」分は源泉徴収で課税完結のため対象外（divListedComp/divListedSep いずれにも入らない none は除外される）。
-  // 損益通算・繰越損失の控除前の総額に課税されているため、通算後の税額より源泉税が多ければ還付になる。
-  const divListedDeclared = divListedMethod !== 'none' ? divListedRev : 0; // 総合・申告分離いずれも源泉あり
-  // ①③配当（上場配当＋公社債等）の源泉：収入×15.315%/5%で概算。実額チェック時は実額入力で置換。
-  const divWithholdBase = divListedDeclared + divBondSep;
-  const useActualWithhold = chk('use-actual-withhold');
-  const divWithholdIT = useActualWithhold ? getN('actual-withhold-it') : Math.floor(divWithholdBase * 0.15315);
-  const divWithholdRT = useActualWithhold ? getN('actual-withhold-rt') : Math.floor(divWithholdBase * 0.05);
+  // ---------- ①③配当の源泉徴収税額（区分ごとに実額入力>0優先・なければ収入×率で概算） ----------
+  // 各区分（①上場・③公社債）の入力欄に置いた源泉徴収税額（所得税）・配当割（住民税）を使用。
+  //   実額（>0）を入れればそれを使い、未入力（0）なら収入×15.315%/5%で概算する（自動計算で上書きしない）。
+  const wAmt = (rev, id, rate) => {
+    const a = activeIncomes.dividend ? getN(id) : 0;
+    return rev > 0 ? (a > 0 ? a : Math.floor(rev * rate)) : 0;
+  };
+  const divLwIT = wAmt(divListedRev, 'div-listed-withhold-it', 0.15315);
+  const divLwRT = wAmt(divListedRev, 'div-listed-withhold-rt', 0.05);
+  const divBwIT = wAmt(divBondRev,   'div-bond-withhold-it',   0.15315);
+  const divBwRT = wAmt(divBondRev,   'div-bond-withhold-rt',   0.05);
+  // 【申告する①③】（総合・申告分離）→ 所得税は源泉徴収税額、住民税は配当割額控除として精算。
+  //   ①上場配当は総合課税で申告しても源泉徴収済みのため精算対象に含む。
+  const divDeclWithIT = (divListedMethod !== 'none' ? divLwIT : 0) + (divBondMethod !== 'none' ? divBwIT : 0);
+  const divDeclWithRT = (divListedMethod !== 'none' ? divLwRT : 0) + (divBondMethod !== 'none' ? divBwRT : 0);
+  // 【申告しない①③】（源泉分離課税）→ 精算せず確定額。まとめタブに「申告しない源泉徴収税額」として別建て表示。
+  const withheldIT    = (divListedMethod === 'none' ? divLwIT : 0) + (divBondMethod === 'none' ? divBwIT : 0);
+  const withheldRT    = (divListedMethod === 'none' ? divLwRT : 0) + (divBondMethod === 'none' ? divBwRT : 0);
+  const withheldTotal = withheldIT + withheldRT;
   // 株式等譲渡の源泉：株式ブロックの実額入力を優先。未入力（0）なら譲渡益×15.315%/5%で概算。
   const stockGainPositive  = Math.max(0, stockRev - stockCost);
   const stockWithholdItIn  = activeIncomes.stock ? getN('stock-withhold-it') : 0;
   const stockWithholdRtIn  = activeIncomes.stock ? getN('stock-withhold-rt') : 0;
   const stockWithholdIT = stockWithholdItIn > 0 ? stockWithholdItIn : (activeIncomes.stock ? Math.floor(stockGainPositive * 0.15315) : 0);
   const stockWithholdRT = stockWithholdRtIn > 0 ? stockWithholdRtIn : (activeIncomes.stock ? Math.floor(stockGainPositive * 0.05) : 0);
-  // 源泉徴収税額の合計（①③配当＋株式等譲渡）。所得税は源泉徴収税額、住民税は配当割額控除・株式等譲渡所得割額控除として精算。
-  const sepWithholdIT = divWithholdIT + stockWithholdIT;   // 源泉所得税（所得税15%＋復興0.315%）
-  const sepWithholdRT = divWithholdRT + stockWithholdRT;   // 配当割額＋株式等譲渡所得割額（住民税5%）
+  // 申告分の源泉徴収税額の合計（申告する①③＋株式等譲渡）。所得税＝源泉徴収税額、住民税＝配当割額控除・株式等譲渡所得割額控除として精算。
+  const sepWithholdIT = divDeclWithIT + stockWithholdIT;   // 源泉所得税（所得税15%＋復興0.315%）
+  const sepWithholdRT = divDeclWithRT + stockWithholdRT;   // 配当割額＋株式等譲渡所得割額（住民税5%）
 
   // ---------- 医療費控除 ----------
   const medPaid    = getN('medical-paid');
@@ -1445,11 +1434,9 @@ function calc() {
 
   const stockTaxTotal = sepIT + stockTaxRT;                        // 分離課税の算出税額合計（源泉精算前・まとめタブ用）
   const rtGrand       = totalRT;                                   // 住民税 年税額（配当割額控除後）
-  // 「申告しない」①③の源泉徴収済み税額（源泉分離課税）は申告納税額には含まれないが、
-  //   その年の税負担合計には含めて表示する（所得税側・住民税側に加算）。
-  const itGrandTotal  = itGrand + withheldIT;                      // 所得税（源泉分離含む・まとめタブ表示用）
-  const rtGrandTotal  = rtGrand + withheldRT;                      // 住民税（源泉分離含む・まとめタブ表示用）
-  const grandTotal    = itGrandTotal + rtGrandTotal;
+  // 「申告しない」①③の源泉徴収税額（源泉分離課税）は申告納税額（所得税/住民税）とは別建て。
+  //   年間税負担合計（hero）には含めるが、所得税カード・住民税カードには混ぜない。
+  const grandTotal    = itGrand + rtGrand + withheldTotal;
 
   // ===================================================================
   // UI更新
@@ -1458,13 +1445,13 @@ function calc() {
   // --- まとめタブ ---
   const baseSalary = salary || 1; // 実効税率計算用
   set('total-tax-display', fmt(grandTotal));
-  set('total-tax-sub', `所得税 ${itGrandTotal.toLocaleString()} 円 ＋ 住民税 ${rtGrandTotal.toLocaleString()} 円` +
-    (withheldTotal > 0 ? `（うち申告しない①③の源泉徴収済み ${withheldTotal.toLocaleString()} 円を含む）` : '') +
+  set('total-tax-sub', `所得税 ${itGrand.toLocaleString()} 円 ＋ 住民税 ${rtGrand.toLocaleString()} 円` +
+    (withheldTotal > 0 ? ` ＋ 申告しない源泉徴収税額 ${withheldTotal.toLocaleString()} 円` : '') +
     (stockTaxTotal > 0 ? `（申告分離課税の算出税額 ${stockTaxTotal.toLocaleString()} 円・源泉精算前）` : ''));
-  set('s-it', fmt(itGrandTotal));
-  set('s-rt', fmt(rtGrandTotal));
+  set('s-it', fmt(itGrand));
+  set('s-rt', fmt(rtGrand));
   set('s-st', stockTaxTotal > 0 ? fmt(stockTaxTotal) : '―');
-  set('s-total', fmt(grandTotal));
+  set('s-withheld', withheldTotal > 0 ? fmt(withheldTotal) : '―');
 
   // 所得内訳行
   const incomeRows = [
@@ -1572,8 +1559,7 @@ function calc() {
   // --- 分離課税タブ ---
   const hasStock    = activeIncomes.stock && (stockRev > 0 || stockLoss > 0);
   const hasDivSep      = activeIncomes.dividend && (divListedSep > 0 || divBondSep > 0);
-  const hasDivWithheld = activeIncomes.dividend && withheldTotal > 0;
-  const hasSeparate    = hasStock || hasDivSep || hasDivWithheld;
+  const hasSeparate    = hasStock || hasDivSep;
   el('no-separate-msg').style.display      = hasSeparate ? 'none' : '';
   el('stock-result').style.display          = 'none'; // 統合ボックスに置換
   el('dividend-separate-result').style.display = hasSeparate ? '' : 'none';
@@ -1597,9 +1583,6 @@ function calc() {
     set('div-sep-withheld-it', sepWithholdIT > 0 ? '▲ ' + fmt(sepWithholdIT) : '0 円');
     set('div-sep-rt',      fmt(stockTaxRT));
     set('div-sep-withheld-rt', sepWithholdRT > 0 ? '▲ ' + fmt(sepWithholdRT) : '0 円');
-    set('div-sep-withheld', withheldTotal > 0
-      ? `${fmt(withheldTotal)}（所得税 ${withheldIT.toLocaleString()} 円 ＋ 住民税 ${withheldRT.toLocaleString()} 円）`
-      : '0 円');
   }
 }
 
@@ -1643,10 +1626,6 @@ function toggleAutoShaho() {
   el('shaho-manual').style.display = auto ? 'none' : '';
   el('shaho-auto').style.display   = auto ? '' : 'none';
   el('shaho').readOnly = auto;
-}
-
-function toggleActualWithhold() {
-  el('actual-withhold-fields').style.display = chk('use-actual-withhold') ? '' : 'none';
 }
 
 function showCount(id) {
@@ -1741,7 +1720,6 @@ function applyFormState(state) {
   }
   toggleSpouseFields();
   toggleAutoShaho();
-  toggleActualWithhold();
   updateDividendFields();
   ['dis-gen', 'dis-sp', 'dis-co'].forEach(id => showCount(id));
   // 計算結果の表示状態を復元（計算済みなら復元した入力値で再計算して表示）
