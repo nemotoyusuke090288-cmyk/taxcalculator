@@ -188,11 +188,11 @@
 </header>
 
 <div class="notice" id="year-notice">
-  ⚠️ <strong>令和7年度税制改正（令和7〜8年分 時限措置）</strong>：
+  ⚠️ <strong>令和7年度税制改正</strong>：
   ①所得税の基礎控除が所得に応じて<strong>58〜95万円</strong>に拡大（合計所得655万円超は58万円）。
   ②住民税の基礎控除は<strong>変更なし（43万円）</strong>。
   ③給与所得控除の最低保証額が<strong>55万→65万円</strong>に引き上げ（190万円以下に適用拡大）。
-  令和9年分以降は所得税基礎控除が一律58万円に戻る予定。詳細は国税庁ウェブサイトでご確認ください。
+  令和8年分は年度セレクターで切り替えてください。詳細は国税庁ウェブサイトでご確認ください。
 </div>
 
 <div class="main-layout">
@@ -247,7 +247,7 @@
       </div>
       <div class="checkbox-row" style="margin-top:4px">
         <input type="checkbox" id="has23under-emp">
-        <label for="has23under-emp">23歳未満の扶養親族あり（所得金額調整控除の対象）</label>
+        <label for="has23under-emp">23歳未満の扶養親族あり（所得金額調整控除の対象。令和8年分からは生命保険料控除の上乗せにも使用）</label>
       </div>
     </div>
 
@@ -548,7 +548,7 @@
         <input type="checkbox" id="spouse-elderly">
         <label for="spouse-elderly">老人控除対象配偶者（70歳以上）</label>
       </div>
-      <div class="hint">配偶者控除：配偶者の合計所得58万円以下（給与収入123万円以下。令和7年分以降）。58万円超133万円以下は配偶者特別控除。</div>
+      <div class="hint">配偶者控除：配偶者の合計所得58万円以下（給与収入123万円以下。令和7年分）／62万円以下（給与収入136万円以下。令和8年分）。これを超え133万円以下は配偶者特別控除。</div>
     </div>
   </div>
 </div>
@@ -568,9 +568,9 @@
     <div class="dep-grid"><div>年少扶養<span style="font-size:11px;color:var(--gray-400)">（15歳以下）</span></div><input type="number" class="count-input" id="dep-minor" value="0" min="0" max="10"><div class="amount-label">控除なし</div></div>
     <div class="dep-grid"><div>老人扶養（同居）<span style="font-size:11px;color:var(--gray-400)">（70歳以上）</span></div><input type="number" class="count-input" id="dep-eld-co" value="0" min="0" max="10"><div class="amount-label">58万円</div></div>
     <div class="dep-grid"><div>老人扶養（別居）<span style="font-size:11px;color:var(--gray-400)">（70歳以上）</span></div><input type="number" class="count-input" id="dep-eld-ot" value="0" min="0" max="10"><div class="amount-label">48万円</div></div>
-    <div class="hint" style="margin-top:6px">扶養親族の所得要件：合計所得<strong>58万円</strong>以下（給与収入123万円以下。令和7年分以降）。</div>
+    <div class="hint" style="margin-top:6px">扶養親族の所得要件：合計所得<strong>58万円</strong>以下（給与収入123万円以下。令和7年分）／<strong>62万円</strong>以下（給与収入136万円以下。令和8年分）。</div>
     <div class="divider-label" style="margin-top:12px">特定親族特別控除（令和7年分から新設）</div>
-    <div class="hint" style="margin-bottom:8px">19〜22歳の親族で合計所得<strong>58万円超123万円以下</strong>（給与収入123万円超188万円以下）の場合、所得に応じて最大63万円を控除（いわゆる「150万円の壁」対応。<a href="https://www.nta.go.jp/taxes/shiraberu/taxanswer/shotoku/1177.htm" target="_blank" rel="noopener">国税庁 No.1177</a>）。</div>
+    <div class="hint" style="margin-bottom:8px">19〜22歳の親族で合計所得<strong>58万円超123万円以下</strong>（給与収入123万円超188万円以下。令和8年分は<strong>62万円超</strong>＝給与収入136万円超197万円以下）の場合、所得に応じて最大63万円を控除（いわゆる「150万円の壁」対応。<a href="https://www.nta.go.jp/taxes/shiraberu/taxanswer/shotoku/1177.htm" target="_blank" rel="noopener">国税庁 No.1177</a>）。</div>
     <div class="dep-grid"><div>対象人数</div><input type="number" class="count-input" id="dep-tokutei" value="0" min="0" max="10"><div class="amount-label">最大63万円</div></div>
     <div class="field-row">
       <div><label>対象親族の給与収入（1人あたり）</label><div class="sub-label">複数人の場合は同額と仮定。給与以外の所得がある場合は給与換算で入力</div></div>
@@ -924,7 +924,9 @@ const RULES = {
       if (y <= 8500000) return y - (Math.floor(y * 9 / 10) - 1100000);
       return 1950000;
     },
-    // 所得税 基礎控除（令和7〜8年分 時限措置：所得に応じて段階的、令和9年以降は一律58万円）
+    // 同一生計配偶者・扶養親族の合計所得金額要件（令和7年分：58万円以下）
+    depLimit: 580000,
+    // 所得税 基礎控除（令和7年分。国税庁タックスアンサーNo.1199）
     basicIT: (income) => {
       if (income <= 25000000) {
         // 高所得フェーズアウト（2,350万超）
@@ -962,7 +964,7 @@ const RULES = {
     spouseIT:  [[9000000, 380000, 480000], [9500000, 260000, 320000], [10000000, 130000, 160000]],
     spouseRT:  [[9000000, 330000, 380000], [9500000, 220000, 260000], [10000000, 110000, 130000]],
     ssIT: [ // 配偶者特別控除（所得税）[合計所得下限, 上限, 900万以下, 950万以下, 1000万以下]
-      [480000, 950000,  380000, 260000, 130000],
+      [580000, 950000,  380000, 260000, 130000],
       [950000, 1000000, 360000, 240000, 120000],
       [1000000,1050000, 310000, 210000, 110000],
       [1050000,1100000, 260000, 180000,  90000],
@@ -973,7 +975,7 @@ const RULES = {
       [1300000,1330000,  30000,  20000,  10000],
     ],
     ssRT: [ // 配偶者特別控除（住民税）
-      [480000, 1000000, 330000, 220000, 110000],
+      [580000, 1000000, 330000, 220000, 110000],
       [1000000,1050000, 310000, 210000, 110000],
       [1050000,1100000, 260000, 180000,  90000],
       [1100000,1150000, 210000, 140000,  70000],
@@ -990,7 +992,7 @@ const RULES = {
     spRT:  { singleParent: 300000, widow: 260000 },
     swIT: 270000, swRT: 260000,
     // 特定親族特別控除（19〜22歳・合計所得58万円超123万円以下。令和7年分所得税/令和8年度住民税から）
-    // [親族の合計所得上限, 控除額]。所得税は国税庁タックスアンサーNo.1177、住民税は各自治体公表値。
+    // [親族の合計所得上限, 控除額]。所得税は国税庁タックスアンサーNo.1177、住民税は地方税法314条の2第1項12号。
     tokuteiIT: [[850000,630000],[900000,610000],[950000,510000],[1000000,410000],[1050000,310000],
                 [1100000,210000],[1150000,110000],[1200000,60000],[1230000,30000]],
     tokuteiRT: [[950000,450000],[1000000,410000],[1050000,310000],
@@ -998,20 +1000,28 @@ const RULES = {
   },
 
   2026: {
-    // 給与所得控除（令和8・9年分）
-    // 最低保証：74万円（本則69万+特例5万）、収入220万円以下に適用
-    // 220万円超の計算式は令和7年と同様（暫定）
+    // 給与所得控除（令和8・9年分。国税庁タックスアンサーNo.1410、令和8年4月1日現在法令等）
+    // 最低保障：74万円（本則69万+特例5万）、収入220万円以下に適用。220万円超の計算式は令和7年分と同じ（確定）
+    // 住民税（令和9・10年度分）も同額（総務省 令和8年1月21日事務連絡）
     empDed: (y) => {
       if (y < 741000)   return y;
-      if (y <= 2200000) return 740000;
+      if (y < 2191000)  return 740000;
+      // 219万1,000円以上220万円未満は給与所得の金額が段階的に定められている（No.1410 注2）
+      if (y < 2193000)  return y - 1451000;
+      if (y < 2196000)  return y - 1453000;
+      if (y < 2200000)  return y - 1456000;
       const q4 = Math.floor(y / 4000);
       if (y <= 3600000) return y - (q4 * 2800 - 80000);
       if (y <= 6600000) return y - (q4 * 3200 - 440000);
       if (y <= 8500000) return y - (Math.floor(y * 9 / 10) - 1100000);
       return 1950000;
     },
-    // 所得税 基礎控除（令和8年分）
-    // 3段階：489万以下104万、655万以下67万、655万超62万（令和9年以降は一律62万）
+    // 同一生計配偶者・扶養親族の合計所得金額要件（令和8年分：62万円以下。住民税は令和9年度分から）
+    depLimit: 620000,
+    // 生命保険料控除：23歳未満の扶養親族がいる場合、新生命保険料の控除上限が6万円（所得税のみ。No.1140）
+    lifeChild: true,
+    // 所得税 基礎控除（令和8年分・令和9年分。国税庁タックスアンサーNo.1199）
+    // 3段階：489万以下104万、655万以下67万、655万超62万（令和10年分以後は132万以下99万・それ以外62万）
     basicIT: (income) => {
       if (income <= 25000000) {
         if (income > 24500000) return 160000; // 2,450万超〜2,500万以下：16万
@@ -1023,14 +1033,14 @@ const RULES = {
       }
       return 0;
     },
-    // 住民税 基礎控除（令和8年度：変更なし）
+    // 住民税 基礎控除（令和9年度分：改正なし）
     basicRT: (income) => {
       if (income <= 24000000) return 430000;
       if (income <= 24500000) return 290000;
       if (income <= 25000000) return 150000;
       return 0;
     },
-    // 以下は令和7年と同様（暫定）
+    // 税率・復興特別所得税2.1%は令和7年分と同じ（No.2260。防衛特別所得税は令和9年分から）
     itBrackets: [
       { max: 1950000,  rate: 0.05, ded: 0 },
       { max: 3300000,  rate: 0.10, ded: 97500 },
@@ -1045,8 +1055,8 @@ const RULES = {
     rtFlat:  { mun: 3000, pref: 1000, forest: 1000 },
     spouseIT:  [[9000000, 380000, 480000], [9500000, 260000, 320000], [10000000, 130000, 160000]],
     spouseRT:  [[9000000, 330000, 380000], [9500000, 220000, 260000], [10000000, 110000, 130000]],
-    ssIT: [
-      [480000, 950000,  380000, 260000, 130000],
+    ssIT: [ // 配偶者特別控除（所得税。令和8年分以降：62万円超133万円以下。No.1195）
+      [620000, 950000,  380000, 260000, 130000],
       [950000, 1000000, 360000, 240000, 120000],
       [1000000,1050000, 310000, 210000, 110000],
       [1050000,1100000, 260000, 180000,  90000],
@@ -1056,8 +1066,8 @@ const RULES = {
       [1250000,1300000,  60000,  40000,  20000],
       [1300000,1330000,  30000,  20000,  10000],
     ],
-    ssRT: [
-      [480000, 1000000, 330000, 220000, 110000],
+    ssRT: [ // 配偶者特別控除（住民税。令和9年度分：62万円超）
+      [620000, 1000000, 330000, 220000, 110000],
       [1000000,1050000, 310000, 210000, 110000],
       [1050000,1100000, 260000, 180000,  90000],
       [1100000,1150000, 210000, 140000,  70000],
@@ -1070,11 +1080,12 @@ const RULES = {
     depRT: { gen: 330000, spec: 450000, eldCo: 450000, eldOt: 380000 },
     disIT: { gen: 270000, sp: 400000, co: 750000 },
     disRT: { gen: 260000, sp: 300000, co: 530000 },
+    // ひとり親控除：所得税35万円（No.1171）。住民税は令和10年度分から33万円のため令和9年度分は30万円
     spIT:  { singleParent: 350000, widow: 270000 },
     spRT:  { singleParent: 300000, widow: 260000 },
     swIT: 270000, swRT: 260000,
-    // 特定親族特別控除（19〜22歳・合計所得58万円超123万円以下。令和7年分所得税/令和8年度住民税から）
-    // [親族の合計所得上限, 控除額]。所得税は国税庁タックスアンサーNo.1177、住民税は各自治体公表値。
+    // 特定親族特別控除（19〜22歳・合計所得62万円超123万円以下。下限はdepLimit）
+    // [親族の合計所得上限, 控除額]。所得税は国税庁タックスアンサーNo.1177、住民税は地方税法314条の2第1項12号。
     tokuteiIT: [[850000,630000],[900000,610000],[950000,510000],[1000000,410000],[1050000,310000],
                 [1100000,210000],[1150000,110000],[1200000,60000],[1230000,30000]],
     tokuteiRT: [[950000,450000],[1000000,410000],[1050000,310000],
@@ -1093,9 +1104,11 @@ const getN   = (id, def=0) => { const v = parseFloat(el(id)?.value ?? def); retu
 const getI   = (id, def=0) => { const v = parseInt(el(id)?.value ?? def, 10); return isNaN(v) ? def : v; };
 const chk    = (id) => el(id)?.checked ?? false;
 
-// 生命保険料控除（新契約）
-const lifeIT_1 = (p) => p <= 0 ? 0 : p <= 20000 ? p : p <= 40000 ? Math.floor(p/2)+10000 : p <= 80000 ? Math.floor(p/4)+20000 : 40000;
-const lifeRT_1 = (p) => p <= 0 ? 0 : p <= 12000 ? p : p <= 32000 ? Math.floor(p/2)+6000 : p <= 56000 ? Math.floor(p/4)+14000 : 28000;
+// 生命保険料控除（新契約）。計算上の1円未満の端数は切上げ
+const lifeIT_1 = (p) => p <= 0 ? 0 : p <= 20000 ? p : p <= 40000 ? Math.ceil(p/2)+10000 : p <= 80000 ? Math.ceil(p/4)+20000 : 40000;
+const lifeRT_1 = (p) => p <= 0 ? 0 : p <= 12000 ? p : p <= 32000 ? Math.ceil(p/2)+6000 : p <= 56000 ? Math.ceil(p/4)+14000 : 28000;
+// 令和8年分以降：23歳未満の扶養親族がいる場合の新生命保険料（所得税のみ。上限6万円）
+const lifeIT_child = (p) => p <= 0 ? 0 : p <= 30000 ? p : p <= 60000 ? Math.ceil(p/2)+15000 : p <= 120000 ? Math.ceil(p/4)+30000 : 60000;
 
 // 協会けんぽ概算（東京都 令和7年）
 function estimateShaho(salary) {
@@ -1126,8 +1139,8 @@ function pensionDed(income, age65, otherIncome) {
 }
 
 // 配偶者控除・配偶者特別控除
-function calcSpouseDed(myIncome, spouseTotalIncome, isElderly, bracketTable, specialTable) {
-  if (spouseTotalIncome <= 480000) {
+function calcSpouseDed(myIncome, spouseTotalIncome, isElderly, bracketTable, specialTable, depLimit) {
+  if (spouseTotalIncome <= depLimit) {
     // 配偶者控除
     for (const [lim, normal, elderly] of bracketTable) {
       if (myIncome <= lim) return isElderly ? elderly : normal;
@@ -1145,15 +1158,14 @@ function calcSpouseDed(myIncome, spouseTotalIncome, isElderly, bracketTable, spe
 
 // 住民税の調整控除（人的控除額の差の合計に基づく税額控除。地方税法第37条/314条の6）
 // diffs: 各人的控除の「所得税控除額 − 住民税控除額」（配偶者・扶養・障害者・ひとり親等）
+//   同条第1号イの表の法定額と一致する項目のみ渡す。特定親族特別控除は同表に掲げられていないため対象外。
 function calcAdjustmentRT(totalIncome, taxableRT, diffs) {
-  // 基礎控除の人的控除差は法定差額（令和7〜8年の時限的引上げは反映せず）
-  let basicDiff = 50000;
-  if (totalIncome > 24500000)      basicDiff = 10000;
-  else if (totalIncome > 24000000) basicDiff = 30000;
+  // 基礎控除分は一律5万円（同条第1号イ。合計所得2,400万円超でも5万円、2,500万円超は調整控除なし）
+  const basicDiff = 50000;
   const persDiff = basicDiff
                  + Math.max(0, diffs.spouse) + Math.max(0, diffs.dep)
                  + Math.max(0, diffs.dis)    + Math.max(0, diffs.sp)
-                 + Math.max(0, diffs.sw)     + Math.max(0, diffs.tokutei ?? 0);
+                 + Math.max(0, diffs.sw);
   // persDiff（人的控除差合計）はふるさと納税特例分の限界税率判定にも使うため、常に返す
   if (totalIncome > 25000000) return { mun: 0, pref: 0, persDiff }; // 合計所得2,500万円超は調整控除の対象外
   if (persDiff <= 0) return { mun: 0, pref: 0, persDiff };
@@ -1264,7 +1276,7 @@ function calc() {
   const disSpecial = chk('dis-sp') || chk('dis-co');
   let highIncAdjDed = 0;
   if (salary > 8500000 && (has23under || disSpecial)) {
-    highIncAdjDed = Math.min((salary - 8500000) * 0.1, 150000);
+    highIncAdjDed = Math.ceil((Math.min(salary, 10000000) - 8500000) * 0.1); // 1円未満切上げ（No.1411）
   }
   const empIncome = Math.max(0, salary - empDed - highIncAdjDed);
 
@@ -1311,8 +1323,8 @@ function calc() {
   const spEmpInc  = Math.max(0, spSalary - r.empDed(spSalary) - spShaho);
   const spTotal   = hasSpouse ? Math.max(0, spEmpInc + spOther) : 0;
 
-  const spouseDedIT = hasSpouse ? calcSpouseDed(totalIncome, spTotal, spEldy, r.spouseIT, r.ssIT) : 0;
-  const spouseDedRT = hasSpouse ? calcSpouseDed(totalIncome, spTotal, spEldy, r.spouseRT, r.ssRT) : 0;
+  const spouseDedIT = hasSpouse ? calcSpouseDed(totalIncome, spTotal, spEldy, r.spouseIT, r.ssIT, r.depLimit) : 0;
+  const spouseDedRT = hasSpouse ? calcSpouseDed(totalIncome, spTotal, spEldy, r.spouseRT, r.ssRT, r.depLimit) : 0;
 
   // ---------- 扶養控除 ----------
   const depGeneral = getI('dep-general');
@@ -1325,12 +1337,12 @@ function calc() {
   const depDedRT = depGeneral * r.depRT.gen + depSpecific * r.depRT.spec
                  + depEldCo * r.depRT.eldCo + depEldOt * r.depRT.eldOt;
 
-  // ---------- 特定親族特別控除（19〜22歳・所得58万円超123万円以下。令和7年分から） ----------
+  // ---------- 特定親族特別控除（19〜22歳・所得がdepLimit（58万/62万）超123万円以下。令和7年分から） ----------
   const tokuteiN      = getI('dep-tokutei');
   const tokuteiSalary = getN('dep-tokutei-salary');
   const tokuteiInc    = Math.max(0, tokuteiSalary - r.empDed(tokuteiSalary)); // 給与収入→合計所得
   const tokuteiLookup = (table, inc) => {
-    if (inc <= 580000 || inc > 1230000) return 0;   // 58万円以下は通常の扶養控除（特定扶養）の対象
+    if (inc <= r.depLimit || inc > 1230000) return 0;   // 要件額以下は通常の扶養控除（特定扶養）の対象
     for (const [max, ded] of table) { if (inc <= max) return ded; }
     return 0;
   };
@@ -1355,7 +1367,8 @@ function calc() {
   const lifeGen  = getN('life-gen');
   const lifeCare = getN('life-care');
   const lifePens = getN('life-pension');
-  const lifeDedIT = Math.min(lifeIT_1(lifeGen) + lifeIT_1(lifeCare) + lifeIT_1(lifePens), 120000);
+  const lifeGenIT = (r.lifeChild && has23under) ? lifeIT_child(lifeGen) : lifeIT_1(lifeGen);
+  const lifeDedIT = Math.min(lifeGenIT + lifeIT_1(lifeCare) + lifeIT_1(lifePens), 120000);
   const lifeDedRT = Math.min(lifeRT_1(lifeGen) + lifeRT_1(lifeCare) + lifeRT_1(lifePens), 70000);
 
   // ---------- 地震保険料控除 ----------
@@ -1430,10 +1443,10 @@ function calc() {
   const donDed      = Math.max(0, Math.min(donTotal, totalIncomeForThreshold * 0.4) - 2000);
 
   // ---------- 住民税の非課税判定（小金井市＝1級地。地方税法295条・附則3条の3、市税条例） ----------
-  // 扶養親族の数：年少扶養（16歳未満）を含む。同一生計配偶者（合計所得58万円以下）も加算。
+  // 扶養親族の数：年少扶養（16歳未満）を含む。同一生計配偶者（合計所得がdepLimit以下）も加算。
   const depMinor  = getI('dep-minor');
   const fuyoN     = depGeneral + depSpecific + depMinor + depEldCo + depEldOt
-                  + ((hasSpouse && spTotal <= 580000) ? 1 : 0);
+                  + ((hasSpouse && spTotal <= r.depLimit) ? 1 : 0);
   const hasFuyo   = fuyoN > 0;
   // 合計所得金額（繰越控除「前」）：均等割の非課税判定に使用。当年内の損益通算は反映する。
   let ncS = stockRev - stockCost, ncL = divListedSep, ncB = divBondSep;
@@ -1512,14 +1525,12 @@ function calc() {
 
   // 調整控除（人的控除額の差に基づく住民税の税額控除。市3%/都2%）
   const adj = calcAdjustmentRT(totalIncome, taxableRT, {
-    spouse: (hasSpouse && spTotal <= 500000) ? (spouseDedIT - spouseDedRT) : 0,
+    // 控除対象配偶者（配偶者控除の対象）のみ。配偶者特別控除は法定の対象（配偶者所得55万円未満）に該当し得ない
+    spouse: (hasSpouse && spTotal <= r.depLimit) ? (spouseDedIT - spouseDedRT) : 0,
     dep: depDedIT - depDedRT,
     dis: disDedIT - disDedRT,
     sp:  spDedIT - spDedRT,
     sw:  swDedIT - swDedRT,
-    // 特定親族特別控除：親族の所得95万円以下の区分のみ所得税と住民税の控除額に差が生じる
-    // （58万超85万以下＝18万、85万超90万以下＝16万、90万超95万以下＝6万。95万超は同額＝差0）
-    tokutei: tokuteiDedIT - tokuteiDedRT,
   });
   const adjustmentRT = adj.mun + adj.pref;               // 表示用合計
 
@@ -1537,13 +1548,17 @@ function calc() {
   const munDonBasic  = Math.ceil(donRTBase * 0.06);
   const prefDonBasic = Math.ceil(donRTBase * 0.04);
   // 特例分（ふるさと納税のみ）：（ふるさと納税 − 2,000円）×（90% − 所得税限界税率×1.021）
-  //   限界税率は「課税総所得金額（住民税）− 人的控除差合計」に適用される所得税率（地方税法37条の2第2項）。
+  //   限界税率は「課税総所得金額（住民税）− 人的控除差調整額」に適用される所得税率（地方税法37条の2第11項/314条の7第11項）。
+  //   人的控除差調整額 ＝ 調整控除の人的控除差合計 ＋（所得税の基礎控除額 − 48万円。負なら0）。
+  //   控除後が0を下回る場合の割合は90%（限界税率0%扱い）。令和9年度分も同じ算式を適用（改正条文は未照合）。
   //   上限：調整控除後の所得割額の20%（市/都各々）。市3/5・都2/5に按分し、各々1円未満切上げ。
   let munDonSpecial = 0, prefDonSpecial = 0;
   if (donFurusato > 2000) {
-    const marginalBase = Math.max(0, taxableRT - adj.persDiff);
+    const marginalBase = taxableRT - (adj.persDiff + Math.max(0, basicIT - 480000));
     let marginalRate = 0;
-    for (const b of r.itBrackets) { if (marginalBase <= b.max) { marginalRate = b.rate; break; } }
+    if (marginalBase >= 0) {
+      for (const b of r.itBrackets) { if (marginalBase <= b.max) { marginalRate = b.rate; break; } }
+    }
     const specialRaw = (donFurusato - 2000) * (0.9 - marginalRate * 1.021);
     munDonSpecial  = Math.min(Math.ceil(specialRaw * 3 / 5), Math.floor(Math.max(0, munIncRaw  - adj.mun)  * 0.2));
     prefDonSpecial = Math.min(Math.ceil(specialRaw * 2 / 5), Math.floor(Math.max(0, prefIncRaw - adj.pref) * 0.2));
@@ -1858,12 +1873,12 @@ function showCount(id) {
 const YEAR_META = {
   2025: {
     badge: '令和7年分（2025年）',
-    notice: '⚠️ <strong>令和7年度税制改正（令和7〜8年分 時限措置）</strong>：①所得税の基礎控除が所得に応じて<strong>58〜95万円</strong>に拡大（合計所得655万円超は58万円）。②住民税の基礎控除は<strong>変更なし（43万円）</strong>。③給与所得控除の最低保証額が<strong>55万→65万円</strong>に引き上げ（190万円以下に適用拡大）。',
+    notice: '⚠️ <strong>令和7年度税制改正</strong>：①所得税の基礎控除が所得に応じて<strong>58〜95万円</strong>に拡大（合計所得655万円超は58万円）。②住民税の基礎控除は<strong>変更なし（43万円）</strong>。③給与所得控除の最低保証額が<strong>55万→65万円</strong>に引き上げ（190万円以下に適用拡大）。',
     rtHint: '令和7年分の所得をもとに、令和8年度（2026年6月〜）に徴収される住民税',
   },
   2026: {
     badge: '令和8年分（2026年）',
-    notice: '⚠️ <strong>令和8年度税制改正</strong>：①所得税の基礎控除が<strong>62〜104万円</strong>（所得489万円以下は104万円、655万円以下は67万円、655万円超は62万円）。②住民税の基礎控除は<strong>変更なし（43万円）</strong>。③給与所得控除の最低保証額が<strong>65万→74万円</strong>（220万円以下に適用）。※一部暫定値を含みます。',
+    notice: '⚠️ <strong>令和8年度税制改正</strong>：①所得税の基礎控除が<strong>62〜104万円</strong>（所得489万円以下は104万円、655万円以下は67万円、655万円超は62万円）。②住民税の基礎控除は<strong>変更なし（43万円）</strong>。③給与所得控除の最低保障額が<strong>65万→74万円</strong>（220万円以下に適用）。④配偶者・扶養親族の所得要件が<strong>58万→62万円</strong>以下。⑤23歳未満の扶養親族がいる場合、新生命保険料の控除上限が<strong>4万→6万円</strong>（所得税のみ）。所得税は国税庁（令和8年4月1日現在法令等）、住民税（令和9年度分）は総務省の改正通知に基づきます。',
     rtHint: '令和8年分の所得をもとに、令和9年度（2027年6月〜）に徴収される住民税',
   },
 };
