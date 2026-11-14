@@ -439,6 +439,15 @@
     <div class="income-block" id="block-stock" style="display:none">
       <div class="income-block-title">📈 株式等の譲渡所得（申告分離課税）</div>
       <div class="field-row">
+        <div><label>申告方式</label><div class="sub-label">「申告しない」は特定口座（源泉徴収あり）のみ選択可。口座単位で選択し、所得税・住民税で同じ扱いになります</div></div>
+        <div class="input-with-unit">
+          <select id="stock-method" onchange="updateStockFields()">
+            <option value="declare" selected>申告する（申告分離課税）</option>
+            <option value="none">申告しない（源泉徴収で課税完結）</option>
+          </select>
+        </div>
+      </div>
+      <div class="field-row">
         <div><label>譲渡収入（売却額）</label></div>
         <div class="input-with-unit"><input type="number" id="stock-rev" value="0" min="0" step="10000"><span class="unit">円</span></div>
       </div>
@@ -446,7 +455,7 @@
         <div><label>取得費＋譲渡費用</label><div class="sub-label">購入時の金額＋売却手数料等</div></div>
         <div class="input-with-unit"><input type="number" id="stock-cost" value="0" min="0" step="10000"><span class="unit">円</span></div>
       </div>
-      <div class="field-row">
+      <div class="field-row" id="stock-loss-row">
         <div><label>繰越損失</label><div class="sub-label">前年以前から繰り越した損失額</div></div>
         <div class="input-with-unit"><input type="number" id="stock-loss" value="0" min="0" step="10000"><span class="unit">円</span></div>
       </div>
@@ -458,7 +467,8 @@
         <div><label>株式等譲渡所得割額（住民税）</label><div class="sub-label">同じ譲渡益に課された住民税（5%）。未入力（0）なら譲渡益×5%で概算。住民税の株式等譲渡所得割額控除の対象</div></div>
         <div class="input-with-unit"><input type="number" id="stock-withhold-rt" value="0" min="0" step="1"><span class="unit">円</span></div>
       </div>
-      <div class="hint">所得税15%＋復興税0.315%＋住民税5%＝20.315%の税率で別途計算します（総所得に含みません）。源泉徴収された税額は申告で精算され、税額が源泉税より少なければ還付されます。</div>
+      <div class="hint" id="stock-hint-declare">所得税15%＋復興税0.315%＋住民税5%＝20.315%の税率で別途計算します（総所得に含みません）。源泉徴収された税額は申告で精算され、税額が源泉税より少なければ還付されます。</div>
+      <div class="hint" id="stock-hint-none" style="display:none">申告しない場合、譲渡益は所得税・住民税の計算にも合計所得金額（配偶者控除・基礎控除等の判定）にも含めません。源泉徴収された税額は「源泉徴収済み税額（未申告・分離）」として年間税負担額に加算します。譲渡損失の繰越や他の所得との損益通算には申告が必要です（租税特別措置法37条の11の5）。</div>
     </div>
   </div>
 </div>
@@ -880,6 +890,16 @@
         <div class="result-row total"><span class="lbl">株式等譲渡税合計（20.315%）</span><span class="val" id="st-total">―</span></div>
       </div>
     </div>
+    <div id="stock-undecl-result" style="display:none">
+      <div class="separate-tax-box">
+        <div class="stb-title">📈 株式等の譲渡（申告しない・源泉徴収で課税完結）</div>
+        <div class="result-row sub"><span class="lbl">譲渡益（収入 − 取得費等）</span><span class="val" id="su-gain">―</span></div>
+        <div class="result-row sub"><span class="lbl">源泉徴収税額（所得税15.315%）</span><span class="val" id="su-it">―</span></div>
+        <div class="result-row sub"><span class="lbl">株式等譲渡所得割額（住民税5%）</span><span class="val" id="su-rt">―</span></div>
+        <div class="result-row total"><span class="lbl">源泉徴収済み税額（未申告・分離）</span><span class="val" id="su-total">―</span></div>
+        <div class="hint" style="margin-top:6px">※ 申告しないため、所得税・住民税の計算と合計所得金額には含めていません。まとめタブの「源泉徴収済み税額（未申告・分離）」に加算しています。</div>
+      </div>
+    </div>
     <div id="dividend-separate-result" style="display:none">
       <div class="separate-tax-box">
         <div class="stb-title">📊 申告分離課税（上場配当・公社債等）＋ 株式等譲渡所得の損益通算</div>
@@ -1235,9 +1255,13 @@ function calc() {
   const miscExp    = activeIncomes.misc      ? getN('misc-exp')    : 0;
   const tempRev    = activeIncomes.temporary ? getN('temp-rev')    : 0;
   const tempExp    = activeIncomes.temporary ? getN('temp-exp')    : 0;
-  const stockRev   = activeIncomes.stock     ? getN('stock-rev')   : 0;
-  const stockCost  = activeIncomes.stock     ? getN('stock-cost')  : 0;
-  const stockLoss  = activeIncomes.stock     ? getN('stock-loss')  : 0;
+  // 株式等譲渡：特定口座（源泉徴収あり）は申告不要を選択可（措法37条の11の5）。
+  //   申告しない場合は譲渡益を税額計算・合計所得金額に含めず、源泉徴収税額のみ未申告・分離として集計する。
+  const stockDeclared = activeIncomes.stock && (el('stock-method')?.value ?? 'declare') !== 'none';
+  const stockUndecl   = activeIncomes.stock && !stockDeclared;
+  const stockRev   = stockDeclared ? getN('stock-rev')   : 0;
+  const stockCost  = stockDeclared ? getN('stock-cost')  : 0;
+  const stockLoss  = stockDeclared ? getN('stock-loss')  : 0;
 
   // 配当所得 ── ①上場株式等（申告分離 or 総合課税）、②非上場株式等（総合課税のみ）、③公社債投資信託等（申告分離のみ）
   const divListedMethod   = activeIncomes.dividend ? (el('div-listed-method')?.value   ?? 'none') : 'none';
@@ -1410,15 +1434,20 @@ function calc() {
   const divDeclWithIT = (divListedMethod !== 'none' ? divLwIT : 0) + (divBondMethod !== 'none' ? divBwIT : 0);
   const divDeclWithRT = (divListedMethod !== 'none' ? divLwRT : 0) + (divBondMethod !== 'none' ? divBwRT : 0);
   // 【申告しない①③】（源泉分離課税）→ 精算せず確定額。まとめタブに「申告しない源泉徴収税額」として別建て表示。
-  const withheldIT    = (divListedMethod === 'none' ? divLwIT : 0) + (divBondMethod === 'none' ? divBwIT : 0);
-  const withheldRT    = (divListedMethod === 'none' ? divLwRT : 0) + (divBondMethod === 'none' ? divBwRT : 0);
-  const withheldTotal = withheldIT + withheldRT;
   // 株式等譲渡の源泉：株式ブロックの実額入力を優先。未入力（0）なら譲渡益×15.315%/5%で概算。
-  const stockGainPositive  = Math.max(0, stockRev - stockCost);
+  const stockGainPositive  = activeIncomes.stock ? Math.max(0, getN('stock-rev') - getN('stock-cost')) : 0;
   const stockWithholdItIn  = activeIncomes.stock ? getN('stock-withhold-it') : 0;
   const stockWithholdRtIn  = activeIncomes.stock ? getN('stock-withhold-rt') : 0;
-  const stockWithholdIT = stockWithholdItIn > 0 ? stockWithholdItIn : (activeIncomes.stock ? Math.floor(stockGainPositive * 0.15315) : 0);
-  const stockWithholdRT = stockWithholdRtIn > 0 ? stockWithholdRtIn : (activeIncomes.stock ? Math.floor(stockGainPositive * 0.05) : 0);
+  const stockWithholdItAll = stockWithholdItIn > 0 ? stockWithholdItIn : Math.floor(stockGainPositive * 0.15315);
+  const stockWithholdRtAll = stockWithholdRtIn > 0 ? stockWithholdRtIn : Math.floor(stockGainPositive * 0.05);
+  // 申告する場合のみ精算対象。申告しない場合は未申告・分離（確定額）へ。
+  const stockWithholdIT = stockDeclared ? stockWithholdItAll : 0;
+  const stockWithholdRT = stockDeclared ? stockWithholdRtAll : 0;
+  const stockUndeclIT   = stockUndecl ? stockWithholdItAll : 0;
+  const stockUndeclRT   = stockUndecl ? stockWithholdRtAll : 0;
+  const withheldIT    = (divListedMethod === 'none' ? divLwIT : 0) + (divBondMethod === 'none' ? divBwIT : 0) + stockUndeclIT;
+  const withheldRT    = (divListedMethod === 'none' ? divLwRT : 0) + (divBondMethod === 'none' ? divBwRT : 0) + stockUndeclRT;
+  const withheldTotal = withheldIT + withheldRT;
   // 申告分の源泉徴収税額の合計（申告する①③＋株式等譲渡）。所得税＝源泉徴収税額、住民税＝配当割額控除・株式等譲渡所得割額控除として精算。
   const sepWithholdIT = divDeclWithIT + stockWithholdIT;   // 源泉所得税（所得税15%＋復興0.315%）
   const sepWithholdRT = divDeclWithRT + stockWithholdRT;   // 配当割額＋株式等譲渡所得割額（住民税5%）
@@ -1795,10 +1824,18 @@ function calc() {
   }
 
   // --- 分離課税タブ ---
-  const hasStock    = activeIncomes.stock && (stockRev > 0 || stockLoss > 0);
+  const hasStock    = stockDeclared && (stockRev > 0 || stockLoss > 0);
   const hasDivSep      = activeIncomes.dividend && (divListedSep > 0 || divBondSep > 0);
   const hasSeparate    = hasStock || hasDivSep;
-  el('no-separate-msg').style.display      = hasSeparate ? 'none' : '';
+  el('no-separate-msg').style.display      = (hasSeparate || stockUndecl) ? 'none' : '';
+  // 申告しない株式等譲渡（源泉徴収で課税完結）
+  el('stock-undecl-result').style.display  = stockUndecl ? '' : 'none';
+  if (stockUndecl) {
+    set('su-gain', fmt(stockGainPositive));
+    set('su-it',   fmt(stockUndeclIT));
+    set('su-rt',   fmt(stockUndeclRT));
+    set('su-total', fmt(stockUndeclIT + stockUndeclRT));
+  }
   el('stock-result').style.display          = 'none'; // 統合ボックスに置換
   el('dividend-separate-result').style.display = hasSeparate ? '' : 'none';
 
@@ -1806,7 +1843,7 @@ function calc() {
     const gainLabel = stockGainRaw < 0
       ? '▲ ' + fmt(Math.abs(stockGainRaw)) + '（損失）'
       : fmt(stockGainRaw);
-    set('div-sep-stock-gain', activeIncomes.stock ? gainLabel : '0 円');
+    set('div-sep-stock-gain', stockDeclared ? gainLabel : '0 円');
     set('div-sep-rev',      divListedSep > 0 ? fmt(divListedSep) : '0 円');
     set('div-sep-bond-rev', divBondSep   > 0 ? fmt(divBondSep)   : '0 円');
     set('div-sep-taxable', fmt(taxableSepBase));
@@ -1897,6 +1934,14 @@ function updateYearMeta(year) {
   el('rt-year-hint').textContent = m.rtHint;
 }
 
+function updateStockFields() {
+  const none = (el('stock-method')?.value ?? 'declare') === 'none';
+  // 繰越損失は申告が前提のため、申告しない場合は入力不可
+  el('stock-loss-row').style.display     = none ? 'none' : '';
+  el('stock-hint-declare').style.display = none ? 'none' : '';
+  el('stock-hint-none').style.display    = none ? '' : 'none';
+}
+
 function updateDividendFields() {
   const listedMethod   = el('div-listed-method')?.value   ?? 'none';
   const unlistedMethod = el('div-unlisted-method')?.value ?? 'none';
@@ -1971,6 +2016,7 @@ function applyFormState(state) {
   toggleAutoShaho();
   toggleMedMode();
   updateDividendFields();
+  updateStockFields();
   ['dis-gen', 'dis-sp', 'dis-co'].forEach(id => showCount(id));
   // 計算結果の表示状態を復元（計算済みなら復元した入力値で再計算して表示）
   if (state.calculated) {
