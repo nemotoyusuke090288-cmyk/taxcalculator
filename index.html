@@ -762,6 +762,14 @@
       <div class="tax-card total-tax center-card"><div class="label">源泉徴収済み税額（未申告・分離）※所得税＋住民税</div><div class="amount" id="s-withheld">―</div></div>
     </div>
     <div class="result-section">
+      <h3>ふるさと納税の上限額（目安）</h3>
+      <div class="result-row total"><span class="lbl">自己負担2,000円で済む寄附の上限額</span><span class="val" id="s-furusato-limit">―</span></div>
+      <div class="result-row"><span class="lbl">入力中のふるさと納税額</span><span class="val" id="s-furusato-now">―</span></div>
+      <div class="result-row"><span class="lbl" id="s-furusato-diff-lbl">あと寄附できる額</span><span class="val" id="s-furusato-diff">―</span></div>
+      <div class="result-row" id="s-furusato-over-row" style="display:none"><span class="lbl">自己負担額（上限超過分を含む概算）</span><span class="val negative" id="s-furusato-burden">―</span></div>
+      <div class="hint" style="margin-top:6px">上限額 ＝ 住民税所得割額（調整控除後）×20% ÷（90% − 所得税の限界税率×1.021）＋ 2,000円（市民税・都民税を別々に判定）。入力した所得・控除にもとづく目安で、年の途中では見込み額です。住宅ローン控除等で住民税の所得割が残らない場合は、上限内でも全額は控除されません。</div>
+    </div>
+    <div class="result-section">
       <h3>所得の内訳</h3>
       <div id="income-breakdown-rows"></div>
       <div class="result-row" id="dual-adj-row" style="display:none">
@@ -1584,16 +1592,30 @@ function calc() {
   //   控除後が0を下回る場合の割合は90%（限界税率0%扱い）。令和9年度分も同じ算式を適用（改正条文は未照合）。
   //   上限：調整控除後の所得割額の20%（市/都各々）。市3/5・都2/5に按分し、各々1円未満切上げ。
   let munDonSpecial = 0, prefDonSpecial = 0;
-  if (donFurusato > 2000) {
-    const marginalBase = taxableRT - (adj.persDiff + Math.max(0, basicIT - 480000));
-    let marginalRate = 0;
-    if (marginalBase >= 0) {
-      for (const b of r.itBrackets) { if (marginalBase <= b.max) { marginalRate = b.rate; break; } }
-    }
-    const specialRaw = (donFurusato - 2000) * (0.9 - marginalRate * 1.021);
-    munDonSpecial  = Math.min(Math.ceil(specialRaw * 3 / 5), Math.floor(Math.max(0, munIncRaw  - adj.mun)  * 0.2));
-    prefDonSpecial = Math.min(Math.ceil(specialRaw * 2 / 5), Math.floor(Math.max(0, prefIncRaw - adj.pref) * 0.2));
+  const marginalBase = taxableRT - (adj.persDiff + Math.max(0, basicIT - 480000));
+  let marginalRate = 0;
+  if (marginalBase >= 0) {
+    for (const b of r.itBrackets) { if (marginalBase <= b.max) { marginalRate = b.rate; break; } }
   }
+  const specialFactor  = 0.9 - marginalRate * 1.021;
+  const munSpecialCap  = Math.floor(Math.max(0, munIncRaw  - adj.mun)  * 0.2);
+  const prefSpecialCap = Math.floor(Math.max(0, prefIncRaw - adj.pref) * 0.2);
+  let furusatoOver = 0;   // 特例分の上限超過により控除されない額（＝2,000円を超える自己負担の増加分）
+  if (donFurusato > 2000) {
+    const specialRaw = (donFurusato - 2000) * specialFactor;
+    munDonSpecial  = Math.min(Math.ceil(specialRaw * 3 / 5), munSpecialCap);
+    prefDonSpecial = Math.min(Math.ceil(specialRaw * 2 / 5), prefSpecialCap);
+    furusatoOver   = Math.max(0, Math.ceil(specialRaw * 3 / 5) - munSpecialCap)
+                   + Math.max(0, Math.ceil(specialRaw * 2 / 5) - prefSpecialCap);
+  }
+  // ふるさと納税の上限額の目安（自己負担2,000円で済む最大の寄附額）
+  //   特例分が市・都いずれの上限（調整控除後所得割の20%）も超えない最大額。
+  //   市：特例分×3/5 ≦ 市の上限、都：特例分×2/5 ≦ 都の上限 の両方を満たす特例分の最大値 ÷（90%−限界税率×1.021）＋2,000円。
+  //   あわせて住民税基本分の対象上限（総所得金額等の30%）も超えない範囲とする（所得税は40%で、より緩い）。
+  const specialRawMax = Math.min(munSpecialCap * 5 / 3, prefSpecialCap * 5 / 2);
+  const furusatoLimit = specialRawMax > 0
+    ? Math.min(Math.floor(specialRawMax / specialFactor) + 2000, Math.floor(totalIncomeForThreshold * 0.3))
+    : 0;
   const munDonCredit  = munDonBasic + munDonSpecial;
   const prefDonCredit = prefDonBasic + prefDonSpecial;
   const donCreditRT   = munDonCredit + prefDonCredit;   // 表示用合計
@@ -1689,6 +1711,16 @@ function calc() {
   set('s-decl-withheld-it', totalWithholdIT > 0 ? fmt(totalWithholdIT) : '―');
   set('s-decl-withheld-rt', sepWithholdRT > 0 ? fmt(sepWithholdRT) : '―');
   set('s-withheld', withheldTotal > 0 ? fmt(withheldTotal) : '―');
+
+  // ふるさと納税の上限額の目安
+  set('s-furusato-limit', furusatoLimit > 0 ? fmt(furusatoLimit) : '0 円');
+  const fDiff = furusatoLimit - donFurusato;
+  set('s-furusato-now', fmt(donFurusato));
+  set('s-furusato-diff-lbl', fDiff >= 0 ? 'あと寄附できる額' : '上限を超えている額');
+  set('s-furusato-diff', fmt(Math.abs(fDiff)));
+  el('s-furusato-diff').className = 'val' + (fDiff < 0 ? ' negative' : '');
+  el('s-furusato-over-row').style.display = furusatoOver > 0 ? '' : 'none';
+  set('s-furusato-burden', fmt(2000 + furusatoOver));
 
   // 所得内訳行
   const incomeRows = [
