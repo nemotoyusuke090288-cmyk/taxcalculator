@@ -482,19 +482,19 @@
   <div class="section-body">
     <div class="checkbox-row">
       <input type="checkbox" id="auto-shaho" onchange="toggleAutoShaho()">
-      <label for="auto-shaho">年収から概算自動計算する（協会けんぽ・東京都・厚生年金・雇用保険）</label>
+      <label for="auto-shaho">年収から概算自動計算する（協会けんぽ東京・厚生年金・雇用保険。介護保険料込み・賞与なしと仮定）</label>
     </div>
     <div id="shaho-manual">
       <div class="field-row">
         <div><label>社会保険料合計</label><div class="sub-label">源泉徴収票「社会保険料等の金額」欄</div></div>
         <div class="input-with-unit"><input type="number" id="shaho" value="715000" min="0" step="1000"><span class="unit">円</span></div>
       </div>
-      <div class="field-row">
-        <div><label>iDeCo（小規模企業共済等掛金）</label></div>
-        <div class="input-with-unit"><input type="number" id="ideco" value="0" min="0" step="1000"><span class="unit">円</span></div>
-      </div>
     </div>
-    <div id="shaho-auto" style="display:none" class="hint">年収から協会けんぽ（東京都）の概算で自動計算します。</div>
+    <div id="shaho-auto" style="display:none" class="hint">給与収入÷12を月給とみなし、標準報酬月額の等級に当てはめて月ごとの保険料を積み上げます（協会けんぽ東京支部の年度別料率、介護保険料（40〜64歳）込み、令和8年5月からは子ども・子育て支援金込み）。賞与はないものとして計算するため、賞与が多い場合や40歳未満・65歳以上の場合は実際と差が出ます。正確に計算するには源泉徴収票の「社会保険料等の金額」を入力してください。</div>
+    <div class="field-row">
+      <div><label>iDeCo（小規模企業共済等掛金）</label></div>
+      <div class="input-with-unit"><input type="number" id="ideco" value="0" min="0" step="1000"><span class="unit">円</span></div>
+    </div>
   </div>
 </div>
 
@@ -1140,12 +1140,42 @@ const lifeRT_1 = (p) => p <= 0 ? 0 : p <= 12000 ? p : p <= 32000 ? Math.ceil(p/2
 // 令和8年分以降：23歳未満の扶養親族がいる場合の新生命保険料（所得税のみ。上限6万円）
 const lifeIT_child = (p) => p <= 0 ? 0 : p <= 30000 ? p : p <= 60000 ? Math.ceil(p/2)+15000 : p <= 120000 ? Math.ceil(p/4)+30000 : 60000;
 
-// 協会けんぽ概算（東京都 令和7年）
-function estimateShaho(salary) {
-  const kenpo  = Math.round(Math.min(salary, 13950000) * 0.0499); // 健康保険 4.99%
-  const kousei = Math.round(Math.min(salary,  5502000) * 0.0915); // 厚生年金 9.15%
-  const koyo   = Math.round(salary * 0.006);                       // 雇用保険 0.6%
-  return kenpo + kousei + koyo;
+// 社会保険料の概算（協会けんぽ東京支部・一般の事業。労働者負担分）
+//   前提：賞与なし（年収÷12を月給とみなす）、介護保険料（40〜64歳）を常に含める、年間を通じて同じ月給。
+//   月給を標準報酬月額の等級に当てはめ、月ごとの保険料（50銭以下切捨・50銭超切上げ）を積み上げる。
+//   料率は年度（4月〜翌3月）で改定。健康保険・介護保険は3月分（4月の給与から控除）、
+//   子ども・子育て支援金は令和8年4月分（5月の給与から控除）、雇用保険は4月の給与から切り替わる。
+const SHAHO_GRADES_KENPO = [58,68,78,88,98,104,110,118,126,134,142,150,160,170,180,190,200,220,240,260,280,300,
+  320,340,360,380,410,440,470,500,530,560,590,620,650,680,710,750,790,830,880,930,980,1030,1090,1150,1210,1270,1330,1390];
+const SHAHO_GRADES_KOUSEI = SHAHO_GRADES_KENPO.filter(g => g >= 88 && g <= 650);   // 厚生年金：8.8万〜65万円の32等級
+const SHAHO_KOUSEI_RATE = 0.0915;                                                  // 厚生年金 18.3%の折半
+// 年度別料率（労働者負担分）：健康保険／介護保険／子ども・子育て支援金／雇用保険
+const SHAHO_FY = {
+  2024: { kenpo: 0.0499,  kaigo: 0.0080,  shien: 0,       koyo: 0.006  },
+  2025: { kenpo: 0.04955, kaigo: 0.00795, shien: 0,       koyo: 0.0055 },
+  2026: { kenpo: 0.04925, kaigo: 0.0081,  shien: 0.00115, koyo: 0.005  },
+};
+function shahoGrade(monthly, grades) {
+  for (let k = 0; k < grades.length - 1; k++) {
+    if (monthly < (grades[k] + grades[k + 1]) * 500) return grades[k] * 1000;   // 等級の境目は隣り合う等級の中間
+  }
+  return grades[grades.length - 1] * 1000;
+}
+function estimateShaho(salary, year) {
+  if (salary <= 0) return 0;
+  const monthly = salary / 12;
+  const stdKenpo  = shahoGrade(monthly, SHAHO_GRADES_KENPO);
+  const stdKousei = shahoGrade(monthly, SHAHO_GRADES_KOUSEI);
+  const half = (x) => Math.ceil(x - 0.5);          // 50銭以下切捨・50銭超切上げ
+  const prev = SHAHO_FY[year - 1], cur = SHAHO_FY[year] ?? SHAHO_FY[year - 1];
+  let total = 0;
+  for (let m = 1; m <= 12; m++) {                  // m＝給与の支給月
+    const fy = (m <= 3 && prev) ? prev : cur;      // 1〜3月の給与は前年度の料率
+    const shien = (cur.shien > 0 && m >= 5) ? cur.shien : 0;   // 支援金は5月の給与から
+    total += half(stdKenpo * (fy.kenpo + fy.kaigo)) + half(stdKenpo * shien)
+           + half(stdKousei * SHAHO_KOUSEI_RATE) + half(monthly * fy.koyo);
+  }
+  return total;
 }
 
 // 公的年金等控除
@@ -1297,7 +1327,7 @@ function calc() {
   // 社会保険料
   let shaho;
   if (chk('auto-shaho')) {
-    shaho = estimateShaho(salary);
+    shaho = estimateShaho(salary, parseInt(el('year-select').value));
     el('shaho').value = shaho;
   } else {
     shaho = getN('shaho');
